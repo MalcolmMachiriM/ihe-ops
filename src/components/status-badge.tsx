@@ -26,6 +26,7 @@ const toneMap: Record<string, string> = {
   bank_transfer: "bg-indigo-100 text-indigo-950 border-indigo-200",
   swipe: "bg-amber-100 text-amber-950 border-amber-200",
   other: "bg-slate-100 text-slate-700 border-slate-200",
+  cancelled: "bg-rose-100 text-rose-950 border-rose-200",
 };
 
 export function StatusBadge({ status }: { status: string }) {

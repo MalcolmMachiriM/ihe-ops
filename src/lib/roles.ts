@@ -29,3 +29,7 @@ export function canIssueInvoice(role: StaffRole) {
 export function canRecordPayment(role: StaffRole) {
   return role === "admin" || role === "accounts";
 }
+
+export function canSource(role: StaffRole) {
+  return role === "admin" || role === "sales";
+}

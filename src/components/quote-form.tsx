@@ -22,6 +22,7 @@ type LineState = {
   markupPercent: string;
   sellPrice: string;
   leadTimeDays: string;
+  offerId: string;
 };
 
 type QuoteDefaults = {
@@ -43,6 +44,7 @@ type QuoteDefaults = {
     costPrice: string;
     sellPrice: string;
     leadTimeDays: number | null;
+    offerId?: string | null;
   }[];
 };
 
@@ -57,6 +59,7 @@ const emptyLine = (key: string): LineState => ({
   markupPercent: "30",
   sellPrice: "0.00",
   leadTimeDays: "",
+  offerId: "",
 });
 
 function fromDefaults(defaults?: QuoteDefaults): LineState[] {
@@ -76,6 +79,7 @@ function fromDefaults(defaults?: QuoteDefaults): LineState[] {
       markupPercent: markup.toFixed(2),
       sellPrice: sell.toFixed(2),
       leadTimeDays: line.leadTimeDays == null ? "" : String(line.leadTimeDays),
+      offerId: line.offerId ?? "",
     };
   });
 }
@@ -134,6 +138,7 @@ export function QuoteForm({
     costPrice: num(line.costPrice),
     sellPrice: num(line.sellPrice),
     leadTimeDays: line.leadTimeDays === "" ? null : Number(line.leadTimeDays),
+    offerId: line.offerId || null,
   }));
 
   return (

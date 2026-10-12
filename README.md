@@ -67,4 +67,4 @@ On your machine, keep this repo next to your other projects, for example:
 
 ## Next build steps
 
-Tracked checklist: [PLAN.md](PLAN.md). Phase 1 is in the app. Set `DATABASE_URL`, then run `npm run db:migrate` and `npm run db:seed`. Next session is sourcing compare and purchase orders.
+Tracked checklist: [PLAN.md](PLAN.md). Phase 2 sourcing is in the app. After setting `DATABASE_URL`, run `npm run db:migrate` and `npm run db:seed`. Supplier reply files also need `BLOB_READ_WRITE_TOKEN`. Next session is reports and receivables.

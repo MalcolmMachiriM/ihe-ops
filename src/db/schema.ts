@@ -1,10 +1,12 @@
 import {
+  boolean,
   integer,
   numeric,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -34,6 +36,8 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "paid",
   "void",
 ]);
+
+export const poStatusEnum = pgEnum("po_status", ["draft", "sent", "cancelled"]);
 
 export const paymentMethodEnum = pgEnum("payment_method", [
   "cash",
@@ -105,6 +109,32 @@ export const quotes = pgTable("quotes", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const sourcingItems = pgTable("sourcing_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  enquiryId: uuid("enquiry_id")
+    .notNull()
+    .references(() => enquiries.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  quantity: numeric("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
+  unit: varchar("unit", { length: 32 }).notNull().default("ea"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const supplierOffers = pgTable("supplier_offers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sourcingItemId: uuid("sourcing_item_id")
+    .notNull()
+    .references(() => sourcingItems.id, { onDelete: "cascade" }),
+  supplierId: uuid("supplier_id")
+    .notNull()
+    .references(() => suppliers.id),
+  brand: varchar("brand", { length: 128 }),
+  costPrice: numeric("cost_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  leadTimeDays: integer("lead_time_days"),
+  notes: text("notes"),
+  chosen: boolean("chosen").notNull().default(false),
+});
+
 export const quoteLines = pgTable("quote_lines", {
   id: uuid("id").defaultRandom().primaryKey(),
   quoteId: uuid("quote_id")
@@ -119,6 +149,7 @@ export const quoteLines = pgTable("quote_lines", {
   sellPrice: numeric("sell_price", { precision: 14, scale: 2 }).notNull().default("0"),
   leadTimeDays: integer("lead_time_days"),
   sortOrder: integer("sort_order").notNull().default(0),
+  offerId: uuid("offer_id").references(() => supplierOffers.id, { onDelete: "set null" }),
 });
 
 export const invoices = pgTable("invoices", {
@@ -183,4 +214,64 @@ export const receipts = pgTable("receipts", {
   currency: varchar("currency", { length: 8 }).notNull().default("USD"),
   issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
   notes: text("notes"),
+});
+
+export const supplierRfqs = pgTable(
+  "supplier_rfqs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    enquiryId: uuid("enquiry_id")
+      .notNull()
+      .references(() => enquiries.id, { onDelete: "cascade" }),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    notes: text("notes"),
+    replyNotes: text("reply_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique("supplier_rfqs_enquiry_supplier").on(table.enquiryId, table.supplierId)],
+);
+
+export const supplierRfqFiles = pgTable("supplier_rfq_files", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  rfqId: uuid("rfq_id")
+    .notNull()
+    .references(() => supplierRfqs.id, { onDelete: "cascade" }),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  url: text("url").notNull(),
+  contentType: varchar("content_type", { length: 128 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  number: varchar("number", { length: 64 }).notNull().unique(),
+  quoteId: uuid("quote_id")
+    .notNull()
+    .references(() => quotes.id),
+  supplierId: uuid("supplier_id")
+    .notNull()
+    .references(() => suppliers.id),
+  enquiryId: uuid("enquiry_id").references(() => enquiries.id),
+  status: poStatusEnum("status").notNull().default("draft"),
+  currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const purchaseOrderLines = pgTable("purchase_order_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  purchaseOrderId: uuid("purchase_order_id")
+    .notNull()
+    .references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  brand: varchar("brand", { length: 128 }),
+  quantity: numeric("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
+  unit: varchar("unit", { length: 32 }).notNull().default("ea"),
+  costPrice: numeric("cost_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  leadTimeDays: integer("lead_time_days"),
+  sortOrder: integer("sort_order").notNull().default(0),
 });

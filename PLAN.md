@@ -29,7 +29,8 @@ Checked items below are already true. Unchecked items are the remaining work.
 - [x] Live queries — pages read Postgres. `src/lib/mock-data.ts` is only the seed source
 - [x] Write flows — create and edit customers, suppliers, enquiries, and quotes; convert a quote; record a payment
 - [x] Clerk staff auth and PDF download
-- [ ] Vercel Blob and Resend — later phases
+- [x] Vercel Blob for supplier reply files (`BLOB_READ_WRITE_TOKEN`)
+- [ ] Resend — later phase
 
 ## Session order
 
@@ -40,7 +41,7 @@ Work top to bottom. Tick a session when its “done when” is true.
 - [x] **3. Enquiry + quote create/edit**
 - [x] **4. Invoice + payment + receipt**
 - [x] **5. PDFs** — quote, invoice, and receipt download
-- [ ] **6. Sourcing compare + PO**
+- [x] **6. Sourcing compare + PO**
 - [ ] **7. Reports** — pipeline and margin
 
 ## Phase 1 — Make it real (MVP)
@@ -62,12 +63,12 @@ Ship what staff use every day.
 
 Match how IHE actually prices.
 
-- [ ] Enquiry status in the UI: New → Sourcing → Quoted → Won / Lost / Expired (enum already exists)
-- [ ] Internal supplier RFQ notes and attached supplier replies
-- [ ] Side-by-side supplier compare (price, lead time, brand)
-- [ ] Choose winning lines → generate the client quote
-- [ ] Optional: purchase order to the supplier after the client accepts or pays a deposit
-- [ ] Quote SLA tracking against a ~24h target
+- [x] Enquiry status in the UI: New → Sourcing → Quoted → Won / Lost / Expired (enum already exists)
+- [x] Internal supplier RFQ notes and attached supplier replies
+- [x] Side-by-side supplier compare (price, lead time, brand)
+- [x] Choose winning lines → generate the client quote
+- [x] Optional: purchase order to the supplier after the client accepts or pays a deposit
+- [x] Quote SLA tracking against a ~24h target
 
 **Done when:** sales can show which supplier priced each line and why that quote was issued.
 

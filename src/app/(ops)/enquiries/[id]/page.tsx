@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EnquiryStatusFlow } from "@/components/enquiry-status-flow";
 import { EnquiryForm } from "@/components/record-forms";
 import { PageHeader } from "@/components/page-header";
+import { SlaBadge } from "@/components/sla-badge";
+import { SourcingBoard } from "@/components/sourcing-board";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { getCustomer, getEnquiry, listCustomers } from "@/db/queries";
+import { getCustomer, getEnquiry, getSourcing, listCustomers, listQuotes, listSuppliers } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { canEditQuotes, canManageEnquiries } from "@/lib/roles";
@@ -23,10 +26,19 @@ export default async function EnquiryPage({
   const user = await requireUser();
   const canEdit = user.role ? canManageEnquiries(user.role) : false;
   const canQuote = user.role ? canEditQuotes(user.role) : false;
-  const [customers, customer] = await Promise.all([
+  const [customers, customer, suppliers, sourcing, quotes] = await Promise.all([
     canEdit ? listCustomers() : Promise.resolve([]),
     getCustomer(enquiry.customerId),
+    listSuppliers(),
+    getSourcing(enquiry.id),
+    listQuotes(),
   ]);
+  const firstQuote = quotes
+    .filter((quote) => quote.enquiryId === enquiry.id)
+    .reduce<(typeof quotes)[number] | null>((earliest, quote) => {
+      if (!earliest || quote.createdAt < earliest.createdAt) return quote;
+      return earliest;
+    }, null);
 
   return (
     <div>
@@ -36,8 +48,9 @@ export default async function EnquiryPage({
         actionLabel={canQuote ? "New quote" : undefined}
         actionHref={`/quotes/new?enquiryId=${enquiry.id}`}
       />
+      <EnquiryStatusFlow enquiryId={enquiry.id} status={enquiry.status} canEdit={canEdit} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <StatusBadge status={enquiry.status} />
+        <SlaBadge openedAt={enquiry.createdAt} quotedAt={firstQuote?.createdAt ?? null} />
         <StatusBadge status={enquiry.urgency ?? "normal"} />
         <span className="text-sm capitalize text-slate-500">{enquiry.source}</span>
         {enquiry.neededBy ? (
@@ -64,6 +77,13 @@ export default async function EnquiryPage({
           </CardContent>
         </Card>
       )}
+      <SourcingBoard
+        enquiryId={enquiry.id}
+        canEdit={canEdit}
+        suppliers={suppliers.map((supplier) => ({ id: supplier.id, name: supplier.name }))}
+        items={sourcing.items}
+        rfqs={sourcing.rfqs}
+      />
     </div>
   );
 }

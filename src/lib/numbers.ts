@@ -1,8 +1,8 @@
 import { like } from "drizzle-orm";
 import type { Db } from "@/db";
-import { enquiries, invoices, quotes, receipts } from "@/db/schema";
+import { enquiries, invoices, purchaseOrders, quotes, receipts } from "@/db/schema";
 
-export type DocumentPrefix = "ENQ" | "QT" | "PF" | "INV" | "RCP";
+export type DocumentPrefix = "ENQ" | "QT" | "PF" | "INV" | "RCP" | "PO";
 
 type NumberDb = Pick<Db, "select">;
 
@@ -40,6 +40,14 @@ async function selectNumbers(
       .select({ value: quotes.number })
       .from(quotes)
       .where(like(quotes.number, pattern));
+    return rows.map((row) => row.value);
+  }
+
+  if (prefix === "PO") {
+    const rows = await db
+      .select({ value: purchaseOrders.number })
+      .from(purchaseOrders)
+      .where(like(purchaseOrders.number, pattern));
     return rows.map((row) => row.value);
   }
 

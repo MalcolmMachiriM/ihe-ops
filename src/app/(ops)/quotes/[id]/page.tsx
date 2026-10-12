@@ -7,10 +7,11 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getQuote, listCustomers, listEnquiries, listSuppliers } from "@/db/queries";
+import { PurchaseOrderButton, QuoteReasons } from "@/components/sourcing-board";
+import { getQuote, getQuoteReasons, listCustomers, listEnquiries, listPurchaseOrdersForQuote, listSuppliers, quoteCanRaisePurchaseOrder } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
-import { canCreateProforma, canEditQuotes, canIssueInvoice } from "@/lib/roles";
+import { canCreateProforma, canEditQuotes, canIssueInvoice, canSource } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 export default async function QuotePage({
@@ -25,9 +26,15 @@ export default async function QuotePage({
   const user = await requireUser();
   const canEdit = user.role ? canEditQuotes(user.role) : false;
   const canConvert = quote.status === "sent" || quote.status === "accepted";
-  const [customers, suppliers, enquiries] = canEdit
-    ? await Promise.all([listCustomers(), listSuppliers(), listEnquiries()])
-    : [[], [], []];
+  const [customers, suppliers, enquiries, reasons, orders, canOrder] = await Promise.all([
+    canEdit ? listCustomers() : Promise.resolve([]),
+    canEdit ? listSuppliers() : Promise.resolve([]),
+    canEdit ? listEnquiries() : Promise.resolve([]),
+    quote.enquiryId ? getQuoteReasons(quote.enquiryId) : Promise.resolve([]),
+    listPurchaseOrdersForQuote(quote.id),
+    quoteCanRaisePurchaseOrder(quote.id),
+  ]);
+  const canRaiseOrder = Boolean(user.role && canSource(user.role) && canOrder);
 
   return (
     <div>
@@ -50,6 +57,22 @@ export default async function QuotePage({
       ) : (
         <p className="mb-6 text-sm text-slate-500">Mark the quote as sent before converting it.</p>
       )}
+      <QuoteReasons lines={quote.lines} items={reasons} />
+      {orders.length > 0 ? (
+        <p className="mb-4 text-sm text-slate-600">
+          Purchase orders:{" "}
+          {orders.map((order) => (
+            <Link key={order.id} href={`/purchase-orders/${order.id}`} className="mr-3 text-amber-700 hover:underline">
+              {order.number}
+            </Link>
+          ))}
+        </p>
+      ) : null}
+      {canRaiseOrder ? (
+        <div className="mb-6">
+          <PurchaseOrderButton quoteId={quote.id} />
+        </div>
+      ) : null}
       <Card className="border-slate-200/80 bg-white/90 shadow-none">
         <CardContent className="pt-6">
           {canEdit ? (

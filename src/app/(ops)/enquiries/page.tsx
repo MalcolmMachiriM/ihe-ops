@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listEnquiries } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
+import { SlaBadge } from "@/components/sla-badge";
 import { formatDate } from "@/lib/format";
 import { canManageEnquiries } from "@/lib/roles";
 
@@ -35,6 +36,7 @@ export default async function EnquiriesPage() {
                 <TableHead>Source</TableHead>
                 <TableHead>Owner</TableHead>
                 <TableHead>Opened</TableHead>
+                <TableHead>24h quote</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -54,6 +56,9 @@ export default async function EnquiriesPage() {
                   <TableCell className="capitalize">{enquiry.source}</TableCell>
                   <TableCell>{enquiry.assignedTo ?? "—"}</TableCell>
                   <TableCell>{formatDate(enquiry.createdAt)}</TableCell>
+                  <TableCell>
+                    <SlaBadge openedAt={enquiry.createdAt} quotedAt={enquiry.firstQuotedAt} />
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={enquiry.status} />
                   </TableCell>

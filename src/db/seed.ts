@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { config } from "dotenv";
 import { getDb } from "@/db";
 import {
@@ -9,6 +10,9 @@ import {
   quoteLines,
   quotes,
   receipts,
+  sourcingItems,
+  supplierOffers,
+  supplierRfqs,
   suppliers,
 } from "@/db/schema";
 import {
@@ -70,6 +74,7 @@ async function main() {
   const db = getDb();
   const existing = await db.select({ id: customers.id }).from(customers).limit(1);
   if (existing.length > 0) {
+    await seedSampleSourcing(db);
     console.log("Seed skipped; customers already exist.");
     return;
   }
@@ -217,7 +222,53 @@ async function main() {
     issuedAt: new Date(receipt.issuedAt),
   });
 
+  await seedSampleSourcing(db);
   console.log("Seeded customers, suppliers, enquiries, quotes, invoices, and a receipt.");
+}
+
+const ppeEnquiryId = "a3000000-0000-4000-8000-000000000001";
+const midlandsId = "a2000000-0000-4000-8000-000000000001";
+const safewearId = "a2000000-0000-4000-8000-000000000003";
+
+async function seedSampleSourcing(db: ReturnType<typeof getDb>) {
+  const [enquiry] = await db.select({ id: enquiries.id }).from(enquiries).where(eq(enquiries.id, ppeEnquiryId));
+  if (!enquiry) return;
+  const existing = await db
+    .select({ id: sourcingItems.id })
+    .from(sourcingItems)
+    .where(eq(sourcingItems.enquiryId, ppeEnquiryId))
+    .limit(1);
+  if (existing.length > 0) return;
+
+  const overallsId = "a8000000-0000-4000-8000-000000000001";
+  const bootsId = "a8000000-0000-4000-8000-000000000002";
+  await db.insert(sourcingItems).values([
+    { id: overallsId, enquiryId: ppeEnquiryId, description: "Hi-vis overalls — size mix", quantity: "40.000", unit: "set", sortOrder: 0 },
+    { id: bootsId, enquiryId: ppeEnquiryId, description: "Steel-toe boots — size mix", quantity: "40.000", unit: "pair", sortOrder: 1 },
+  ]);
+  await db.insert(supplierOffers).values([
+    { id: "a8100000-0000-4000-8000-000000000001", sourcingItemId: overallsId, supplierId: safewearId, brand: "SafeWear", costPrice: "28.00", leadTimeDays: 10, chosen: true },
+    { id: "a8100000-0000-4000-8000-000000000002", sourcingItemId: overallsId, supplierId: midlandsId, brand: "Generic", costPrice: "31.00", leadTimeDays: 7, chosen: false },
+    { id: "a8100000-0000-4000-8000-000000000003", sourcingItemId: bootsId, supplierId: safewearId, brand: "SafeWear", costPrice: "55.00", leadTimeDays: 12, chosen: true },
+    { id: "a8100000-0000-4000-8000-000000000004", sourcingItemId: bootsId, supplierId: midlandsId, brand: "Generic", costPrice: "60.00", leadTimeDays: 9, chosen: false },
+  ]);
+  await db.insert(supplierRfqs).values([
+    {
+      id: "a8200000-0000-4000-8000-000000000001",
+      enquiryId: ppeEnquiryId,
+      supplierId: safewearId,
+      notes: "Asked for high-visibility underground sets and a size mix.",
+      replyNotes: "SafeWear can do 40 sets in 10 days at the prices below. Boots need two extra days.",
+    },
+    {
+      id: "a8200000-0000-4000-8000-000000000002",
+      enquiryId: ppeEnquiryId,
+      supplierId: midlandsId,
+      notes: "Checked whether a hardware supplier could beat the PPE specialist on lead time.",
+      replyNotes: "Midlands is faster on overalls but dearer, and the brand is generic.",
+    },
+  ]);
+  console.log("Seeded a supplier compare on the PPE enquiry.");
 }
 
 main()

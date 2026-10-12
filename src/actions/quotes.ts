@@ -112,6 +112,7 @@ export async function saveQuote(
         sellPrice: moneyString(line.sellPrice),
         leadTimeDays: line.leadTimeDays,
         sortOrder: index,
+        offerId: line.offerId ?? null,
       })),
     );
 

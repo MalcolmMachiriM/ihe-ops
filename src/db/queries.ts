@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   customers,
@@ -6,9 +6,15 @@ import {
   invoiceLines,
   invoices,
   payments,
+  purchaseOrderLines,
+  purchaseOrders,
   quoteLines,
   quotes,
   receipts,
+  sourcingItems,
+  supplierOffers,
+  supplierRfqFiles,
+  supplierRfqs,
   suppliers,
 } from "@/db/schema";
 import { num } from "@/lib/format";
@@ -38,7 +44,8 @@ export async function getSupplier(id: string) {
 }
 
 export async function listEnquiries() {
-  return getDb()
+  const db = getDb();
+  const rows = await db
     .select({
       id: enquiries.id,
       reference: enquiries.reference,
@@ -56,6 +63,23 @@ export async function listEnquiries() {
     .from(enquiries)
     .innerJoin(customers, eq(enquiries.customerId, customers.id))
     .orderBy(desc(enquiries.createdAt));
+
+  const quoteRows = await db
+    .select({ enquiryId: quotes.enquiryId, createdAt: quotes.createdAt })
+    .from(quotes);
+  const firstQuotedAt = new Map<string, Date>();
+  for (const quote of quoteRows) {
+    if (!quote.enquiryId) continue;
+    const existing = firstQuotedAt.get(quote.enquiryId);
+    if (!existing || quote.createdAt < existing) {
+      firstQuotedAt.set(quote.enquiryId, quote.createdAt);
+    }
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    firstQuotedAt: firstQuotedAt.get(row.id) ?? null,
+  }));
 }
 
 export async function getEnquiry(id: string) {
@@ -104,6 +128,7 @@ export async function listQuotes() {
       supplierName: suppliers.name,
       leadTimeDays: quoteLines.leadTimeDays,
       sortOrder: quoteLines.sortOrder,
+      offerId: quoteLines.offerId,
     })
     .from(quoteLines)
     .leftJoin(suppliers, eq(quoteLines.supplierId, suppliers.id))
@@ -252,4 +277,135 @@ export async function getDashboard() {
     quotes: quoteRows.slice(0, 5),
     invoices: invoiceRows.slice(0, 5),
   };
+}
+
+export async function getSourcing(enquiryId: string) {
+  const db = getDb();
+  const items = await db
+    .select()
+    .from(sourcingItems)
+    .where(eq(sourcingItems.enquiryId, enquiryId))
+    .orderBy(asc(sourcingItems.sortOrder));
+
+  const offers = items.length
+    ? await db
+        .select({
+          id: supplierOffers.id,
+          sourcingItemId: supplierOffers.sourcingItemId,
+          supplierId: supplierOffers.supplierId,
+          supplierName: suppliers.name,
+          brand: supplierOffers.brand,
+          costPrice: supplierOffers.costPrice,
+          leadTimeDays: supplierOffers.leadTimeDays,
+          notes: supplierOffers.notes,
+          chosen: supplierOffers.chosen,
+        })
+        .from(supplierOffers)
+        .innerJoin(suppliers, eq(supplierOffers.supplierId, suppliers.id))
+        .orderBy(asc(supplierOffers.costPrice))
+    : [];
+
+  const rfqs = await db
+    .select({
+      id: supplierRfqs.id,
+      supplierId: supplierRfqs.supplierId,
+      supplierName: suppliers.name,
+      notes: supplierRfqs.notes,
+      replyNotes: supplierRfqs.replyNotes,
+    })
+    .from(supplierRfqs)
+    .innerJoin(suppliers, eq(supplierRfqs.supplierId, suppliers.id))
+    .where(eq(supplierRfqs.enquiryId, enquiryId));
+
+  const files = rfqs.length
+    ? await db
+        .select()
+        .from(supplierRfqFiles)
+        .orderBy(desc(supplierRfqFiles.createdAt))
+    : [];
+
+  const rfqIds = new Set(rfqs.map((rfq) => rfq.id));
+
+  return {
+    items: items.map((item) => ({
+      ...item,
+      offers: offers.filter((offer) => offer.sourcingItemId === item.id),
+    })),
+    rfqs: rfqs.map((rfq) => ({
+      ...rfq,
+      files: files.filter((file) => rfqIds.has(file.rfqId) && file.rfqId === rfq.id),
+    })),
+  };
+}
+
+export async function getQuoteReasons(enquiryId: string) {
+  const sourcing = await getSourcing(enquiryId);
+  return sourcing.items;
+}
+
+export async function quoteCanRaisePurchaseOrder(quoteId: string) {
+  const db = getDb();
+  const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+  if (!quote) return false;
+  if (quote.status === "accepted") return true;
+  const related = await db
+    .select({ amountPaid: invoices.amountPaid })
+    .from(invoices)
+    .where(eq(invoices.quoteId, quoteId));
+  return related.some((invoice) => num(invoice.amountPaid) > 0);
+}
+
+export async function listPurchaseOrders() {
+  return getDb()
+    .select({
+      id: purchaseOrders.id,
+      number: purchaseOrders.number,
+      quoteId: purchaseOrders.quoteId,
+      quoteNumber: quotes.number,
+      supplierId: purchaseOrders.supplierId,
+      supplierName: suppliers.name,
+      status: purchaseOrders.status,
+      currency: purchaseOrders.currency,
+      createdAt: purchaseOrders.createdAt,
+    })
+    .from(purchaseOrders)
+    .innerJoin(quotes, eq(purchaseOrders.quoteId, quotes.id))
+    .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+    .orderBy(desc(purchaseOrders.createdAt));
+}
+
+export async function listPurchaseOrdersForQuote(quoteId: string) {
+  const rows = await listPurchaseOrders();
+  return rows.filter((row) => row.quoteId === quoteId);
+}
+
+export async function getPurchaseOrder(id: string) {
+  const db = getDb();
+  const [order] = await db
+    .select({
+      id: purchaseOrders.id,
+      number: purchaseOrders.number,
+      quoteId: purchaseOrders.quoteId,
+      quoteNumber: quotes.number,
+      supplierId: purchaseOrders.supplierId,
+      supplierName: suppliers.name,
+      enquiryId: purchaseOrders.enquiryId,
+      status: purchaseOrders.status,
+      currency: purchaseOrders.currency,
+      notes: purchaseOrders.notes,
+      createdAt: purchaseOrders.createdAt,
+    })
+    .from(purchaseOrders)
+    .innerJoin(quotes, eq(purchaseOrders.quoteId, quotes.id))
+    .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+    .where(eq(purchaseOrders.id, id));
+  if (!order) return null;
+
+  const lines = await db
+    .select()
+    .from(purchaseOrderLines)
+    .where(eq(purchaseOrderLines.purchaseOrderId, id))
+    .orderBy(asc(purchaseOrderLines.sortOrder));
+
+  return { ...order, lines };
 }

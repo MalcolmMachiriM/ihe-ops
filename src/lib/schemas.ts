@@ -57,6 +57,7 @@ export const quoteLineSchema = z.object({
   costPrice: z.number().min(0, "Cost cannot be negative"),
   sellPrice: z.number().min(0, "Sell price cannot be negative"),
   leadTimeDays: z.number().int().min(0).nullable(),
+  offerId: z.string().uuid().nullable().optional(),
 });
 
 export const quoteSchema = z.object({

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ClipboardList,
   FileText,
   LayoutDashboard,
   Menu,
@@ -22,6 +23,7 @@ const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/enquiries", label: "Enquiries", icon: PackageSearch },
   { href: "/quotes", label: "Quotes", icon: FileText },
+  { href: "/purchase-orders", label: "Purchase orders", icon: ClipboardList },
   { href: "/invoices", label: "Invoices", icon: ScrollText },
   { href: "/receipts", label: "Receipts", icon: Receipt },
   { href: "/customers", label: "Customers", icon: Users },
