@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Archivo, Figtree } from "next/font/google";
-import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const display = Archivo({
@@ -20,14 +20,18 @@ export const metadata: Metadata = {
     "Infinite Hardware & Electrical operations system for supplier-sourced quotes, invoices, and receipts.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
       className={`${display.variable} ${sans.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans text-slate-900">
-        <AppShell>{children}</AppShell>
+        <ClerkProvider>{children}</ClerkProvider>
       </body>
     </html>
   );

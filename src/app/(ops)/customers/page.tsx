@@ -1,36 +1,27 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { customers } from "@/lib/mock-data";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { listCustomers } from "@/db/queries";
+import { requireUser } from "@/lib/auth";
+import { canManageDirectory } from "@/lib/roles";
 
-export default function CustomersPage() {
+export default async function CustomersPage() {
+  const user = await requireUser();
+  const customers = await listCustomers();
+
   return (
     <div>
       <PageHeader
         title="Customers"
         description="Mining, industrial, agricultural and business clients you quote and bill regularly."
-        actionLabel="Add customer"
+        actionLabel={user.role && canManageDirectory(user.role) ? "Add customer" : undefined}
+        actionHref="/customers/new"
       />
-
       <Card className="border-slate-200/80 bg-white/90 shadow-none">
         <CardHeader>
           <CardTitle>Client directory</CardTitle>
-          <CardDescription>
-            Contact people and companies for follow-up and statements.
-          </CardDescription>
+          <CardDescription>Contact people and companies for follow-up and statements.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -46,7 +37,11 @@ export default function CustomersPage() {
             <TableBody>
               {customers.map((customer) => (
                 <TableRow key={customer.id}>
-                  <TableCell className="font-medium">{customer.name}</TableCell>
+                  <TableCell>
+                    <Link href={`/customers/${customer.id}`} className="font-medium hover:underline">
+                      {customer.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{customer.contactPerson}</TableCell>
                   <TableCell>{customer.email}</TableCell>
                   <TableCell>{customer.phone}</TableCell>

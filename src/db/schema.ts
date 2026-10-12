@@ -140,6 +140,22 @@ export const invoices = pgTable("invoices", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const invoiceLines = pgTable("invoice_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => invoices.id, { onDelete: "cascade" }),
+  supplierId: uuid("supplier_id").references(() => suppliers.id),
+  description: text("description").notNull(),
+  brand: varchar("brand", { length: 128 }),
+  quantity: numeric("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
+  unit: varchar("unit", { length: 32 }).notNull().default("ea"),
+  costPrice: numeric("cost_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  sellPrice: numeric("sell_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  leadTimeDays: integer("lead_time_days"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 export const payments = pgTable("payments", {
   id: uuid("id").defaultRandom().primaryKey(),
   invoiceId: uuid("invoice_id")

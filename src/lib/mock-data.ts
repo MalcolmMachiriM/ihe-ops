@@ -327,28 +327,3 @@ export const receipts: Receipt[] = [
   },
 ];
 
-export function customerName(id: string): string {
-  return customers.find((c) => c.id === id)?.name ?? "Unknown customer";
-}
-
-export function supplierName(id: string): string {
-  return suppliers.find((s) => s.id === id)?.name ?? "Unknown supplier";
-}
-
-export function dashboardStats() {
-  const openEnquiries = enquiries.filter((e) =>
-    ["new", "sourcing", "quoted"].includes(e.status),
-  ).length;
-  const openQuotes = quotes.filter((q) =>
-    ["draft", "sent"].includes(q.status),
-  ).length;
-  const receivables = invoices.reduce(
-    (sum, inv) => sum + Math.max(inv.total - inv.amountPaid, 0),
-    0,
-  );
-  const quotePipeline = quotes
-    .filter((q) => ["draft", "sent"].includes(q.status))
-    .reduce((sum, q) => sum + q.total, 0);
-
-  return { openEnquiries, openQuotes, receivables, quotePipeline };
-}

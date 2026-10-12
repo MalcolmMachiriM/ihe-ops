@@ -7,18 +7,17 @@ IHE typically does **not** hold warehouse stock. Client requests are sourced fro
 ## Stack
 
 - **Next.js** (App Router) + TypeScript + Tailwind CSS + shadcn/ui
-- **Neon Postgres** + Drizzle ORM (schema ready; app runs on mock data until `DATABASE_URL` is set)
+- **Neon Postgres** + Drizzle ORM (`DATABASE_URL` is required)
+- **Clerk** for staff sign-in (Admin, Sales, Accounts)
 - Hosted on **Vercel**
 
 ## Features in this slice
 
+- Staff sign-in with Admin, Sales, and Accounts roles
 - Dashboard with enquiry / quote / receivable snapshot
-- Enquiries pipeline (new → sourcing → quoted)
-- Quotes with supplier cost vs sell price and lead times
-- Invoices (including proforma) and balances
-- Receipts linked to payments
-- Customers and suppliers directories
-- Postgres schema for the full source-to-receipt flow
+- Enquiry intake and quote builder with supplier cost, markup, and margin
+- Proforma or invoice from a sent quote, then payment and automatic receipt
+- Downloadable quote, invoice, and receipt PDFs
 
 ## Local development
 
@@ -29,15 +28,17 @@ npm run dev
 
 App runs at [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
-### Optional: Neon database
+### Database and sign-in
 
 1. Create a Neon project and copy the connection string.
-2. Copy `.env.example` to `.env.local` and set `DATABASE_URL`.
-3. Run migrations when you are ready to leave mock mode:
+2. Create a Clerk application and copy the API keys.
+3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` plus the Clerk keys.
+4. In Clerk, set each staff user's public metadata to `{ "role": "admin" }`, `"sales"`, or `"accounts"`, and add `{ "metadata": "{{user.public_metadata}}" }` to the session token.
+5. Apply the schema and load the sample job:
 
 ```bash
-npm run db:generate
 npm run db:migrate
+npm run db:seed
 ```
 
 ## Scripts
@@ -50,6 +51,7 @@ npm run db:migrate
 | `npm run lint` | ESLint |
 | `npm run db:generate` | Generate Drizzle migrations |
 | `npm run db:migrate` | Apply migrations |
+| `npm run db:seed` | Load sample customers, quotes, and a receipt |
 | `npm run db:studio` | Open Drizzle Studio |
 
 ## Suggested local folder
@@ -65,8 +67,4 @@ On your machine, keep this repo next to your other projects, for example:
 
 ## Next build steps
 
-1. Wire Neon and replace mock data with live queries
-2. Enquiry → supplier RFQ → quote builder forms
-3. Convert quote → proforma/invoice → payment → receipt
-4. PDF generation + WhatsApp/email send
-5. Staff auth and roles
+Tracked checklist: [PLAN.md](PLAN.md). Phase 1 is in the app. Set `DATABASE_URL`, then run `npm run db:migrate` and `npm run db:seed`. Next session is sourcing compare and purchase orders.

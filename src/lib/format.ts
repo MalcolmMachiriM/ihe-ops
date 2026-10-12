@@ -1,3 +1,23 @@
+export function num(value: string | number | null | undefined): number {
+  const parsed = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function moneyString(value: number): string {
+  return roundMoney(value).toFixed(2);
+}
+
+export function toDateInput(value?: string | Date | null): string {
+  if (!value) return "";
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
 export function formatMoney(
   amount: string | number,
   currency: string = "USD",

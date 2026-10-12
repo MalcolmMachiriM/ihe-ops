@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -110,7 +111,13 @@ function SidebarChrome({
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  role,
+}: {
+  children: React.ReactNode;
+  role?: string | null;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -160,12 +167,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   Operations workspace
                 </p>
                 <p className="text-xs text-slate-500">
-                  Mock data mode · connect Neon when ready
+                  Supplier-sourced quotes
                 </p>
               </div>
             </div>
-            <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">
-              Est. 2019 · Zimbabwe
+            <div className="flex items-center gap-3">
+              {role ? (
+                <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">
+                  {role}
+                </div>
+              ) : null}
+              <UserButton />
             </div>
           </header>
           <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>

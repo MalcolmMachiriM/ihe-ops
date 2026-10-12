@@ -1,15 +1,19 @@
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type PageHeaderProps = {
   title: string;
   description: string;
   actionLabel?: string;
+  actionHref?: string;
 };
 
 export function PageHeader({
   title,
   description,
   actionLabel,
+  actionHref,
 }: PageHeaderProps) {
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -21,10 +25,16 @@ export function PageHeader({
           {description}
         </p>
       </div>
-      {actionLabel ? (
-        <Button className="bg-slate-950 text-white hover:bg-slate-800">
+      {actionLabel && actionHref ? (
+        <Link
+          href={actionHref}
+          className={cn(
+            buttonVariants(),
+            "bg-slate-950 text-white hover:bg-slate-800",
+          )}
+        >
           {actionLabel}
-        </Button>
+        </Link>
       ) : null}
     </div>
   );

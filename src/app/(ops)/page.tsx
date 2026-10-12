@@ -17,17 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate, formatMoney } from "@/lib/format";
-import {
-  customerName,
-  dashboardStats,
-  enquiries,
-  invoices,
-  quotes,
-} from "@/lib/mock-data";
+import { getDashboard } from "@/db/queries";
+import { formatDate, formatMoney, num } from "@/lib/format";
+import { canManageEnquiries } from "@/lib/roles";
+import { requireUser } from "@/lib/auth";
 
-export default function DashboardPage() {
-  const stats = dashboardStats();
+export default async function DashboardPage() {
+  const user = await requireUser();
+  const stats = await getDashboard();
 
   const cards = [
     {
@@ -57,15 +54,13 @@ export default function DashboardPage() {
       <PageHeader
         title="Today at IHE"
         description="Track requests as they move from supplier sourcing to quote, invoice, and receipt — without needing warehouse stock."
-        actionLabel="New enquiry"
+        actionLabel={user.role && canManageEnquiries(user.role) ? "New enquiry" : undefined}
+        actionHref="/enquiries/new"
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
-          <Card
-            key={card.label}
-            className="border-slate-200/80 bg-white/90 shadow-none"
-          >
+          <Card key={card.label} className="border-slate-200/80 bg-white/90 shadow-none">
             <CardHeader className="pb-2">
               <CardDescription>{card.label}</CardDescription>
               <CardTitle className="font-[family-name:var(--font-display)] text-3xl">
@@ -84,14 +79,9 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Recent enquiries</CardTitle>
-              <CardDescription>
-                Source from suppliers, then convert to a quote.
-              </CardDescription>
+              <CardDescription>Source from suppliers, then convert to a quote.</CardDescription>
             </div>
-            <Link
-              href="/enquiries"
-              className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900"
-            >
+            <Link href="/enquiries" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900">
               View all <ArrowUpRight className="size-4" />
             </Link>
           </CardHeader>
@@ -105,17 +95,15 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enquiries.map((enquiry) => (
+                {stats.enquiries.map((enquiry) => (
                   <TableRow key={enquiry.id}>
                     <TableCell>
-                      <div className="font-medium text-slate-900">
+                      <Link href={`/enquiries/${enquiry.id}`} className="font-medium text-slate-900 hover:underline">
                         {enquiry.reference}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {enquiry.title}
-                      </div>
+                      </Link>
+                      <div className="text-xs text-slate-500">{enquiry.title}</div>
                     </TableCell>
-                    <TableCell>{customerName(enquiry.customerId)}</TableCell>
+                    <TableCell>{enquiry.customerName}</TableCell>
                     <TableCell>
                       <StatusBadge status={enquiry.status} />
                     </TableCell>
@@ -130,14 +118,9 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Quotes & invoices</CardTitle>
-              <CardDescription>
-                Accepted quotes become proformas or tax invoices.
-              </CardDescription>
+              <CardDescription>Accepted quotes become proformas or tax invoices.</CardDescription>
             </div>
-            <Link
-              href="/quotes"
-              className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900"
-            >
+            <Link href="/quotes" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900">
               Quotes <ArrowUpRight className="size-4" />
             </Link>
           </CardHeader>
@@ -151,21 +134,20 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quotes.map((quote) => (
+                {stats.quotes.map((quote) => (
                   <TableRow key={quote.id}>
                     <TableCell>
-                      <div className="font-medium">{quote.number}</div>
+                      <Link href={`/quotes/${quote.id}`} className="font-medium hover:underline">
+                        {quote.number}
+                      </Link>
                       <StatusBadge status={quote.status} />
                     </TableCell>
-                    <TableCell>
-                      {formatMoney(quote.total, quote.currency)}
-                    </TableCell>
+                    <TableCell>{formatMoney(quote.total, quote.currency)}</TableCell>
                     <TableCell>{formatDate(quote.validUntil)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-
             <Table>
               <TableHeader>
                 <TableRow>
@@ -175,17 +157,16 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((invoice) => (
+                {stats.invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell>
-                      <div className="font-medium">{invoice.number}</div>
+                      <Link href={`/invoices/${invoice.id}`} className="font-medium hover:underline">
+                        {invoice.number}
+                      </Link>
                       <StatusBadge status={invoice.status} />
                     </TableCell>
                     <TableCell>
-                      {formatMoney(
-                        invoice.total - invoice.amountPaid,
-                        invoice.currency,
-                      )}
+                      {formatMoney(num(invoice.total) - num(invoice.amountPaid), invoice.currency)}
                     </TableCell>
                     <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                   </TableRow>
