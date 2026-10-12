@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   FileText,
   LayoutDashboard,
@@ -29,15 +29,27 @@ const nav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  function go(href: string) {
+    setOpen(false);
+    if (pathname !== href) {
+      router.push(href);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff7ed_0%,_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#eef2f6_100%)]">
       <div className="mx-auto flex min-h-screen max-w-[1400px]">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200/80 bg-slate-950 text-slate-100 transition-transform lg:static lg:translate-x-0",
-            open ? "translate-x-0" : "-translate-x-full",
+            "z-40 flex w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950 text-slate-100",
+            "fixed inset-y-0 left-0 transition-transform duration-200 ease-out",
+            "lg:static lg:translate-x-0",
+            open
+              ? "translate-x-0 pointer-events-auto"
+              : "-translate-x-full pointer-events-none lg:translate-x-0 lg:pointer-events-auto",
           )}
         >
           <div className="flex h-full flex-col px-5 py-6">
@@ -71,7 +83,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setOpen(false)}
+                    prefetch
+                    onClick={(event) => {
+                      event.preventDefault();
+                      go(item.href);
+                    }}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                       active
@@ -79,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         : "text-slate-300 hover:bg-slate-800 hover:text-white",
                     )}
                   >
-                    <Icon className="size-4 shrink-0" />
+                    <Icon className="size-4 shrink-0" aria-hidden />
                     {item.label}
                   </Link>
                 );
@@ -106,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
             <div className="flex items-center gap-3">
               <Button
