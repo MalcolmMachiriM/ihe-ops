@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Keep navigation simple for this internal ops app.
+  // cacheComponents + partialPrefetching can stall App Router Link clicks.
   turbopack: {
     rules: {
       "*.css": {
