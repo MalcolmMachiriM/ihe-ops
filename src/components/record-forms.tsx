@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveCustomer, saveSupplier } from "@/actions/directory";
 import { saveEnquiry } from "@/actions/enquiries";
-import { createInvoice, createProforma, recordPayment } from "@/actions/invoices";
+import { createInvoice, createProforma, issueCreditNote, recordPayment } from "@/actions/invoices";
 import { toDateInput } from "@/lib/format";
 import type { ActionState } from "@/lib/schemas";
 
@@ -45,7 +45,7 @@ function BoundForm({
       <Button
         type="submit"
         disabled={pending}
-        className="bg-slate-950 text-white hover:bg-slate-800"
+        className="min-h-11 bg-slate-950 text-white hover:bg-slate-800"
       >
         {pending ? "Saving…" : submitLabel}
       </Button>
@@ -189,13 +189,18 @@ export function PaymentForm({
   invoiceId,
   currency,
   balance,
+  deposit,
 }: {
   invoiceId: string;
   currency: string;
   balance: number;
+  deposit?: boolean;
 }) {
   return (
-    <BoundForm action={recordPayment} submitLabel="Record payment and issue receipt">
+    <BoundForm
+      action={recordPayment}
+      submitLabel={deposit ? "Record deposit and issue receipt" : "Record payment and issue receipt"}
+    >
       <input type="hidden" name="invoiceId" value={invoiceId} />
       <p className="text-sm text-slate-600">
         Balance due: {balance.toFixed(2)} {currency}
@@ -214,6 +219,22 @@ export function PaymentForm({
       />
       <Field label="Reference" name="reference" />
       <Field label="Paid on" name="paidAt" type="date" defaultValue={toDateInput(new Date())} required />
+    </BoundForm>
+  );
+}
+
+export function CreditForm({ invoiceId, currency, balance }: { invoiceId: string; currency: string; balance: number }) {
+  return (
+    <BoundForm action={issueCreditNote} submitLabel="Issue credit note">
+      <input type="hidden" name="invoiceId" value={invoiceId} />
+      <p className="text-sm text-slate-600">
+        Remaining balance: {balance.toFixed(2)} {currency}
+      </p>
+      <Field label="Amount" name="amount" type="number" step="0.01" min="0.01" required />
+      <div className="space-y-1.5">
+        <Label htmlFor="reason">Reason</Label>
+        <Textarea id="reason" name="reason" required />
+      </div>
     </BoundForm>
   );
 }

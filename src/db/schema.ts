@@ -4,6 +4,7 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -38,6 +39,12 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
 ]);
 
 export const poStatusEnum = pgEnum("po_status", ["draft", "sent", "cancelled"]);
+
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
 
 export const paymentMethodEnum = pgEnum("payment_method", [
   "cash",
@@ -274,4 +281,73 @@ export const purchaseOrderLines = pgTable("purchase_order_lines", {
   costPrice: numeric("cost_price", { precision: 14, scale: 2 }).notNull().default("0"),
   leadTimeDays: integer("lead_time_days"),
   sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const documentSequences = pgTable(
+  "document_sequences",
+  {
+    prefix: varchar("prefix", { length: 8 }).notNull(),
+    year: integer("year").notNull(),
+    lastNumber: integer("last_number").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.prefix, table.year] })],
+);
+
+export const creditNotes = pgTable("credit_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  number: varchar("number", { length: 64 }).notNull().unique(),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => invoices.id),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id),
+  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const documentShares = pgTable("document_shares", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  kind: varchar("kind", { length: 16 }).notNull(),
+  documentId: uuid("document_id").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const productTemplates = pgTable("product_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  brand: varchar("brand", { length: 128 }),
+  unit: varchar("unit", { length: 32 }).notNull().default("ea"),
+  category: varchar("category", { length: 128 }),
+  lastCost: numeric("last_cost", { precision: 14, scale: 2 }).notNull().default("0"),
+  currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+  supplierId: uuid("supplier_id").references(() => suppliers.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const quoteApprovals = pgTable("quote_approvals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  quoteId: uuid("quote_id")
+    .notNull()
+    .references(() => quotes.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  status: approvalStatusEnum("status").notNull().default("pending"),
+  reason: text("reason"),
+  requestedBy: varchar("requested_by", { length: 128 }),
+  decidedBy: varchar("decided_by", { length: 128 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+});
+
+export const auditEvents = pgTable("audit_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  entityType: varchar("entity_type", { length: 32 }).notNull(),
+  entityId: uuid("entity_id").notNull(),
+  summary: text("summary").notNull(),
+  actorId: varchar("actor_id", { length: 128 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

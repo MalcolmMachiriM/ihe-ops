@@ -100,9 +100,10 @@ export async function invoicePdf(input: {
   currency: string;
   total: string | number;
   amountPaid: string | number;
+  credited?: string | number;
   lines: Line[];
 }) {
-  const balance = num(input.total) - num(input.amountPaid);
+  const balance = num(input.total) - num(input.amountPaid) - num(input.credited ?? 0);
   const buffer = await renderToBuffer(
     <DocumentShell
       company={input.company}
@@ -130,6 +131,7 @@ export async function invoicePdf(input: {
       })}
       <Text style={styles.total}>Total {formatMoney(input.total, input.currency)}</Text>
       <Text>Paid {formatMoney(input.amountPaid, input.currency)}</Text>
+      <Text>Credits {formatMoney(input.credited ?? 0, input.currency)}</Text>
       <Text>Balance {formatMoney(balance, input.currency)}</Text>
     </DocumentShell>,
   );

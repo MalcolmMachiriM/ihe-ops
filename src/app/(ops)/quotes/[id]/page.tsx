@@ -3,38 +3,60 @@ import { notFound } from "next/navigation";
 import { LineTable } from "@/components/line-table";
 import { QuoteForm } from "@/components/quote-form";
 import { ConvertQuoteButtons } from "@/components/record-forms";
+import { SharePanel } from "@/components/share-panel";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PurchaseOrderButton, QuoteReasons } from "@/components/sourcing-board";
-import { getQuote, getQuoteReasons, listCustomers, listEnquiries, listPurchaseOrdersForQuote, listSuppliers, quoteCanRaisePurchaseOrder } from "@/db/queries";
+import {
+  getCustomer,
+  getQuote,
+  getQuoteReasons,
+  listApprovalsForQuote,
+  listAudit,
+  listCustomers,
+  listEnquiries,
+  listProductTemplates,
+  listPurchaseOrdersForQuote,
+  listSuppliers,
+  quoteCanRaisePurchaseOrder,
+} from "@/db/queries";
 import { requireUser } from "@/lib/auth";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { canCreateProforma, canEditQuotes, canIssueInvoice, canSource } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 export default async function QuotePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   const { id } = await params;
+  const { notice } = await searchParams;
   const quote = await getQuote(id);
   if (!quote) notFound();
 
   const user = await requireUser();
   const canEdit = user.role ? canEditQuotes(user.role) : false;
   const canConvert = quote.status === "sent" || quote.status === "accepted";
-  const [customers, suppliers, enquiries, reasons, orders, canOrder] = await Promise.all([
-    canEdit ? listCustomers() : Promise.resolve([]),
-    canEdit ? listSuppliers() : Promise.resolve([]),
-    canEdit ? listEnquiries() : Promise.resolve([]),
-    quote.enquiryId ? getQuoteReasons(quote.enquiryId) : Promise.resolve([]),
-    listPurchaseOrdersForQuote(quote.id),
-    quoteCanRaisePurchaseOrder(quote.id),
-  ]);
+  const [customers, suppliers, enquiries, reasons, orders, canOrder, templates, approvals, history, customer] =
+    await Promise.all([
+      canEdit ? listCustomers() : Promise.resolve([]),
+      canEdit ? listSuppliers() : Promise.resolve([]),
+      canEdit ? listEnquiries() : Promise.resolve([]),
+      quote.enquiryId ? getQuoteReasons(quote.enquiryId) : Promise.resolve([]),
+      listPurchaseOrdersForQuote(quote.id),
+      quoteCanRaisePurchaseOrder(quote.id),
+      canEdit ? listProductTemplates() : Promise.resolve([]),
+      listApprovalsForQuote(quote.id),
+      listAudit("quote", quote.id),
+      getCustomer(quote.customerId),
+    ]);
   const canRaiseOrder = Boolean(user.role && canSource(user.role) && canOrder);
+  const pending = approvals.find((approval) => approval.status === "pending");
 
   return (
     <div>
@@ -46,6 +68,12 @@ export default async function QuotePage({
           Download PDF
         </Link>
       </div>
+      {notice === "approval" || pending ? (
+        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Saved as a draft. An admin must approve this margin before it can be sent.
+          {pending?.reason ? ` ${pending.reason}.` : ""}
+        </p>
+      ) : null}
       {canConvert && user.role ? (
         <div className="mb-6">
           <ConvertQuoteButtons
@@ -85,6 +113,15 @@ export default async function QuotePage({
                 title: item.title,
                 customerId: item.customerId,
               }))}
+              templates={templates.map((template) => ({
+                id: template.id,
+                name: template.name,
+                brand: template.brand,
+                unit: template.unit,
+                lastCost: template.lastCost,
+                currency: template.currency,
+                supplierId: template.supplierId,
+              }))}
               defaults={{
                 id: quote.id,
                 enquiryId: quote.enquiryId,
@@ -103,6 +140,29 @@ export default async function QuotePage({
           )}
         </CardContent>
       </Card>
+      <Card className="mt-6 max-w-xl border-slate-200/80 bg-white/90 shadow-none">
+        <CardHeader>
+          <CardTitle>Send to the client</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SharePanel kind="quote" documentId={quote.id} email={customer?.email} />
+        </CardContent>
+      </Card>
+      {history.length > 0 ? (
+        <Card className="mt-6 border-slate-200/80 bg-white/90 shadow-none">
+          <CardHeader>
+            <CardTitle>Price and term history</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-slate-700">
+            {history.map((event) => (
+              <p key={event.id}>
+                <span className="text-slate-500">{formatDate(event.createdAt)} · </span>
+                {event.summary}
+              </p>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

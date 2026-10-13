@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   ClipboardList,
   FileText,
   LayoutDashboard,
   Menu,
+  Package,
   PackageSearch,
   Receipt,
   ScrollText,
+  ShieldCheck,
   Truck,
   Users,
   X,
@@ -26,6 +29,9 @@ const nav = [
   { href: "/purchase-orders", label: "Purchase orders", icon: ClipboardList },
   { href: "/invoices", label: "Invoices", icon: ScrollText },
   { href: "/receipts", label: "Receipts", icon: Receipt },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/approvals", label: "Approvals", icon: ShieldCheck },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/suppliers", label: "Suppliers", icon: Truck },
 ] as const;
@@ -48,7 +54,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+              "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
               active
                 ? "bg-amber-500 text-slate-950"
                 : "text-slate-300 hover:bg-slate-800 hover:text-white",
@@ -182,7 +188,7 @@ export function AppShell({
               <UserButton />
             </div>
           </header>
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+          <main className="flex-1 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-8 md:py-8">{children}</main>
         </div>
       </div>
     </div>

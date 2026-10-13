@@ -15,6 +15,13 @@
       "when": 1791845057470,
       "tag": "0001_brief_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791845759927,
+      "tag": "0002_free_sentinel",
+      "breakpoints": true
     }
   ]
 }

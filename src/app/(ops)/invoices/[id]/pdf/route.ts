@@ -22,6 +22,7 @@ export async function GET(
     currency: invoice.currency,
     total: invoice.total,
     amountPaid: invoice.amountPaid,
+    credited: invoice.credited,
     lines: invoice.lines,
   });
 

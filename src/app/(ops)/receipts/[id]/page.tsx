@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { SharePanel } from "@/components/share-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { getReceipt } from "@/db/queries";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCustomer, getReceipt } from "@/db/queries";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export default async function ReceiptPage({
   const { id } = await params;
   const receipt = await getReceipt(id);
   if (!receipt) notFound();
+  const customer = await getCustomer(receipt.customerId);
 
   return (
     <div>
@@ -52,6 +54,14 @@ export default async function ReceiptPage({
           <Link href={`/receipts/${receipt.id}/pdf`} className={cn(buttonVariants({ variant: "outline" }))}>
             Download PDF
           </Link>
+        </CardContent>
+      </Card>
+      <Card className="mt-6 max-w-xl border-slate-200/80 bg-white/90 shadow-none">
+        <CardHeader>
+          <CardTitle>Send to the client</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SharePanel kind="receipt" documentId={receipt.id} email={customer?.email} />
         </CardContent>
       </Card>
     </div>

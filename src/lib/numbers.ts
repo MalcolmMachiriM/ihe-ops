@@ -1,25 +1,52 @@
-import { like } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { enquiries, invoices, purchaseOrders, quotes, receipts } from "@/db/schema";
+import {
+  creditNotes,
+  documentSequences,
+  enquiries,
+  invoices,
+  purchaseOrders,
+  quotes,
+  receipts,
+} from "@/db/schema";
 
-export type DocumentPrefix = "ENQ" | "QT" | "PF" | "INV" | "RCP" | "PO";
+export type DocumentPrefix = "ENQ" | "QT" | "PF" | "INV" | "RCP" | "PO" | "CN";
 
-type NumberDb = Pick<Db, "select">;
+type NumberDb = Pick<Db, "select" | "insert" | "update">;
 
 export async function nextDocumentNumber(db: NumberDb, prefix: DocumentPrefix) {
   const year = new Date().getFullYear();
-  const pattern = `${prefix}-${year}-%`;
+  const currentMax = await highestNumber(db, prefix, `${prefix}-${year}-%`);
+
+  await db
+    .insert(documentSequences)
+    .values({ prefix, year, lastNumber: currentMax })
+    .onConflictDoNothing();
+
+  await db
+    .update(documentSequences)
+    .set({
+      lastNumber: sql`GREATEST(${documentSequences.lastNumber}, ${currentMax})`,
+    })
+    .where(and(eq(documentSequences.prefix, prefix), eq(documentSequences.year, year)));
+
+  const [row] = await db
+    .update(documentSequences)
+    .set({ lastNumber: sql`${documentSequences.lastNumber} + 1` })
+    .where(and(eq(documentSequences.prefix, prefix), eq(documentSequences.year, year)))
+    .returning({ lastNumber: documentSequences.lastNumber });
+
+  return `${prefix}-${year}-${String(row?.lastNumber ?? currentMax + 1).padStart(4, "0")}`;
+}
+
+async function highestNumber(db: NumberDb, prefix: DocumentPrefix, pattern: string) {
   const rows = await selectNumbers(db, prefix, pattern);
   let max = 0;
-
   for (const value of rows) {
     const sequence = Number(value.split("-").at(-1));
-    if (Number.isFinite(sequence) && sequence > max) {
-      max = sequence;
-    }
+    if (Number.isFinite(sequence) && sequence > max) max = sequence;
   }
-
-  return `${prefix}-${year}-${String(max + 1).padStart(4, "0")}`;
+  return max;
 }
 
 async function selectNumbers(
@@ -48,6 +75,14 @@ async function selectNumbers(
       .select({ value: purchaseOrders.number })
       .from(purchaseOrders)
       .where(like(purchaseOrders.number, pattern));
+    return rows.map((row) => row.value);
+  }
+
+  if (prefix === "CN") {
+    const rows = await db
+      .select({ value: creditNotes.number })
+      .from(creditNotes)
+      .where(like(creditNotes.number, pattern));
     return rows.map((row) => row.value);
   }
 

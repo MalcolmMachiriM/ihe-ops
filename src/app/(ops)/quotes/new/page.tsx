@@ -1,7 +1,7 @@
 import { QuoteForm } from "@/components/quote-form";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { listCustomers, listEnquiries, listSuppliers } from "@/db/queries";
+import { listCustomers, listEnquiries, listProductTemplates, listSuppliers } from "@/db/queries";
 
 export default async function NewQuotePage({
   searchParams,
@@ -9,10 +9,11 @@ export default async function NewQuotePage({
   searchParams: Promise<{ enquiryId?: string }>;
 }) {
   const { enquiryId } = await searchParams;
-  const [customers, suppliers, enquiries] = await Promise.all([
+  const [customers, suppliers, enquiries, templates] = await Promise.all([
     listCustomers(),
     listSuppliers(),
     listEnquiries(),
+    listProductTemplates(),
   ]);
   const enquiry = enquiries.find((item) => item.id === enquiryId);
 
@@ -32,6 +33,15 @@ export default async function NewQuotePage({
               reference: item.reference,
               title: item.title,
               customerId: item.customerId,
+            }))}
+            templates={templates.map((template) => ({
+              id: template.id,
+              name: template.name,
+              brand: template.brand,
+              unit: template.unit,
+              lastCost: template.lastCost,
+              currency: template.currency,
+              supplierId: template.supplierId,
             }))}
             defaults={
               enquiry

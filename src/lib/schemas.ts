@@ -65,7 +65,7 @@ export const quoteSchema = z.object({
   enquiryId: z.string().uuid().optional(),
   customerId: z.string().uuid("Choose a customer"),
   status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]),
-  currency: z.string().trim().min(3).max(8).default("USD"),
+  currency: z.enum(["USD", "ZiG"]).default("USD"),
   validUntil: z.string().optional().default(""),
   notes: optionalText,
   terms: optionalText,
@@ -78,6 +78,12 @@ export const paymentSchema = z.object({
   method: z.enum(["cash", "ecocash", "bank_transfer", "swipe"]),
   reference: optionalText,
   paidAt: z.string().min(1, "Payment date is required"),
+});
+
+export const creditSchema = z.object({
+  invoiceId: z.string().uuid(),
+  amount: z.number().positive("Enter a credit amount"),
+  reason: z.string().trim().min(3, "Add a short reason for the credit"),
 });
 
 export type ActionState = { error: string } | null;

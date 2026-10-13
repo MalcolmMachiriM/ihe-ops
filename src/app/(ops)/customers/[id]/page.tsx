@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CustomerForm } from "@/components/record-forms";
 import { PageHeader } from "@/components/page-header";
@@ -20,6 +21,11 @@ export default async function CustomerPage({
   return (
     <div>
       <PageHeader title={customer.name} description={customer.company || "Customer"} />
+      <p className="mb-4 text-sm">
+        <Link href={`/customers/${customer.id}/statement`} className="text-amber-700 hover:underline">
+          View statement
+        </Link>
+      </p>
       <Card className="max-w-2xl border-slate-200/80 bg-white/90 shadow-none">
         <CardContent className="pt-6">
           {canEdit ? (

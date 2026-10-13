@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import {
+  creditNotes,
   enquiries,
   invoiceLines,
   invoices,
@@ -13,11 +14,13 @@ import {
   quotes,
   receipts,
 } from "@/db/schema";
+import { invoiceBalance } from "@/lib/approvals";
 import { guardRole } from "@/lib/auth";
 import { moneyString, num, roundMoney } from "@/lib/format";
 import { nextDocumentNumber } from "@/lib/numbers";
 import {
   type ActionState,
+  creditSchema,
   field,
   paymentSchema,
   zodError,
@@ -167,7 +170,12 @@ export async function recordPayment(
       return { error: "This invoice is void." } as const;
     }
 
-    const balance = roundMoney(num(invoice.total) - num(invoice.amountPaid));
+    const existingCredits = await tx
+      .select({ amount: creditNotes.amount })
+      .from(creditNotes)
+      .where(eq(creditNotes.invoiceId, invoice.id));
+    const credited = existingCredits.reduce((sum, credit) => sum + num(credit.amount), 0);
+    const balance = invoiceBalance(invoice.total, invoice.amountPaid, credited);
     const amount = roundMoney(data.amount);
     if (amount > balance + 0.001) {
       return { error: "Payment is higher than the balance." } as const;
@@ -199,7 +207,8 @@ export async function recordPayment(
       .returning({ id: receipts.id });
 
     const amountPaid = roundMoney(num(invoice.amountPaid) + amount);
-    const status = amountPaid + 0.001 >= num(invoice.total) ? "paid" : "partial";
+    const remaining = invoiceBalance(invoice.total, amountPaid, credited);
+    const status = remaining <= 0.001 ? "paid" : "partial";
     await tx
       .update(invoices)
       .set({
@@ -219,4 +228,69 @@ export async function recordPayment(
   revalidatePath("/receipts");
   revalidatePath("/");
   redirect(`/receipts/${result.receiptId}`);
+}
+
+export async function issueCreditNote(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const denied = await guardRole("admin", "accounts");
+  if (denied) return denied;
+
+  const parsed = creditSchema.safeParse({
+    invoiceId: field(formData, "invoiceId"),
+    amount: Number(field(formData, "amount")),
+    reason: field(formData, "reason"),
+  });
+  if (!parsed.success) return { error: zodError(parsed.error) };
+
+  const data = parsed.data;
+  const db = getDb();
+  const result = await db.transaction(async (tx) => {
+    const [invoice] = await tx.select().from(invoices).where(eq(invoices.id, data.invoiceId));
+    if (!invoice) return { error: "Invoice not found." } as const;
+    if (invoice.status === "void") return { error: "This invoice is void." } as const;
+
+    const existingCredits = await tx
+      .select({ amount: creditNotes.amount })
+      .from(creditNotes)
+      .where(eq(creditNotes.invoiceId, invoice.id));
+    const credited = existingCredits.reduce((sum, credit) => sum + num(credit.amount), 0);
+    const amount = roundMoney(data.amount);
+    const balance = invoiceBalance(invoice.total, invoice.amountPaid, credited);
+    if (amount > balance + 0.001) {
+      return { error: "Credit is higher than the balance." } as const;
+    }
+
+    const number = await nextDocumentNumber(tx, "CN");
+    const [note] = await tx
+      .insert(creditNotes)
+      .values({
+        number,
+        invoiceId: invoice.id,
+        customerId: invoice.customerId,
+        amount: moneyString(amount),
+        currency: invoice.currency,
+        reason: data.reason,
+      })
+      .returning({ id: creditNotes.id });
+
+    const remaining = invoiceBalance(invoice.total, invoice.amountPaid, credited + amount);
+    const status =
+      remaining <= 0.001 ? "paid" : invoice.status === "proforma" ? "proforma" : "partial";
+    await tx
+      .update(invoices)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(invoices.id, invoice.id));
+
+    return { noteId: note.id, invoiceId: invoice.id };
+  });
+
+  if (!("noteId" in result)) return { error: result.error };
+
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${result.invoiceId}`);
+  revalidatePath("/reports");
+  revalidatePath("/");
+  redirect(`/invoices/${result.invoiceId}`);
 }

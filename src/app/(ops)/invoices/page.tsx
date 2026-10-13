@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listInvoices } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
-import { formatDate, formatMoney, num } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { canIssueInvoice } from "@/lib/roles";
 
 export default async function InvoicesPage() {
@@ -50,7 +50,7 @@ export default async function InvoicesPage() {
                   <TableCell>{formatMoney(invoice.total, invoice.currency)}</TableCell>
                   <TableCell>{formatMoney(invoice.amountPaid, invoice.currency)}</TableCell>
                   <TableCell>
-                    {formatMoney(num(invoice.total) - num(invoice.amountPaid), invoice.currency)}
+                    {formatMoney(invoice.balance, invoice.currency)}
                   </TableCell>
                   <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                   <TableCell>

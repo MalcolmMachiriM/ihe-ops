@@ -15,7 +15,7 @@ Day-to-day system for Infinite Hardware & Electrical: take client requests, sour
 | Hosting | Vercel |
 | Files | Vercel Blob (PDFs and attachments) |
 | Auth | Clerk (`publicMetadata.role`: `admin`, `sales`, or `accounts`) |
-| Email (later) | Resend |
+| Email | Resend |
 
 ## Already in the scaffold
 
@@ -30,7 +30,7 @@ Checked items below are already true. Unchecked items are the remaining work.
 - [x] Write flows — create and edit customers, suppliers, enquiries, and quotes; convert a quote; record a payment
 - [x] Clerk staff auth and PDF download
 - [x] Vercel Blob for supplier reply files (`BLOB_READ_WRITE_TOKEN`)
-- [ ] Resend — later phase
+- [x] Resend — document links for quotes, invoices, and receipts (`RESEND_API_KEY`, `RESEND_FROM`)
 
 ## Session order
 
@@ -42,7 +42,7 @@ Work top to bottom. Tick a session when its “done when” is true.
 - [x] **4. Invoice + payment + receipt**
 - [x] **5. PDFs** — quote, invoice, and receipt download
 - [x] **6. Sourcing compare + PO**
-- [ ] **7. Reports** — pipeline and margin
+- [x] **7. Reports** — pipeline and margin
 
 ## Phase 1 — Make it real (MVP)
 
@@ -74,22 +74,22 @@ Match how IHE actually prices.
 
 ## Phase 3 — Money and ops polish
 
-- [ ] Partial payments, deposits, credit notes
-- [ ] Customer statements and receivables ageing
-- [ ] Margin reports (by quote, category, salesperson)
-- [ ] Document numbering (`ENQ` / `QT` / `INV` / `RCP`) with year sequences
-- [ ] Multi-currency if needed (USD / ZiG)
-- [ ] Email / WhatsApp send of PDFs (Resend + share links)
+- [x] Partial payments, deposits, credit notes
+- [x] Customer statements and receivables ageing
+- [x] Margin reports (by quote, category, salesperson)
+- [x] Document numbering (`ENQ` / `QT` / `INV` / `RCP`) with year sequences
+- [x] Multi-currency if needed (USD / ZiG)
+- [x] Email / WhatsApp send of PDFs (Resend + share links)
 
 **Done when:** accounts can reconcile who owes what, and management can see pipeline and margin.
 
 ## Phase 4 — Only if needed
 
-- [ ] Client portal (view and accept quotes)
-- [ ] Light product templates (“last known cost”) — still not full stock
-- [ ] Approvals for low-margin quotes and large discounts
-- [ ] Audit log of price and term changes
-- [ ] Mobile-friendly field use for sales on site
+- [x] Client portal (view and accept quotes)
+- [x] Light product templates (“last known cost”) — still not full stock
+- [x] Approvals for low-margin quotes and large discounts
+- [x] Audit log of price and term changes
+- [x] Mobile-friendly field use for sales on site
 
 ## Out of scope
 

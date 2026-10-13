@@ -1,13 +1,18 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
+  auditEvents,
+  creditNotes,
   customers,
+  documentShares,
   enquiries,
   invoiceLines,
   invoices,
   payments,
+  productTemplates,
   purchaseOrderLines,
   purchaseOrders,
+  quoteApprovals,
   quoteLines,
   quotes,
   receipts,
@@ -17,6 +22,7 @@ import {
   supplierRfqs,
   suppliers,
 } from "@/db/schema";
+import { invoiceBalance } from "@/lib/approvals";
 import { num } from "@/lib/format";
 
 export async function listCustomers() {
@@ -146,7 +152,8 @@ export async function getQuote(id: string) {
 }
 
 export async function listInvoices() {
-  return getDb()
+  const db = getDb();
+  const rows = await db
     .select({
       id: invoices.id,
       number: invoices.number,
@@ -168,6 +175,26 @@ export async function listInvoices() {
     .innerJoin(customers, eq(invoices.customerId, customers.id))
     .leftJoin(quotes, eq(invoices.quoteId, quotes.id))
     .orderBy(desc(invoices.createdAt));
+
+  const credits = await db
+    .select({ invoiceId: creditNotes.invoiceId, amount: creditNotes.amount })
+    .from(creditNotes);
+  const creditedByInvoice = new Map<string, number>();
+  for (const credit of credits) {
+    creditedByInvoice.set(
+      credit.invoiceId,
+      (creditedByInvoice.get(credit.invoiceId) ?? 0) + num(credit.amount),
+    );
+  }
+
+  return rows.map((row) => {
+    const credited = creditedByInvoice.get(row.id) ?? 0;
+    return {
+      ...row,
+      credited,
+      balance: invoiceBalance(row.total, row.amountPaid, credited),
+    };
+  });
 }
 
 export async function getInvoice(id: string) {
@@ -211,11 +238,17 @@ export async function getInvoice(id: string) {
     .where(eq(payments.invoiceId, id))
     .orderBy(desc(payments.paidAt));
 
+  const creditRows = await db
+    .select()
+    .from(creditNotes)
+    .where(eq(creditNotes.invoiceId, id))
+    .orderBy(desc(creditNotes.createdAt));
+
   return {
     ...invoice,
-    balance: num(invoice.total) - num(invoice.amountPaid),
     lines,
     payments: paymentRows,
+    credits: creditRows,
   };
 }
 
@@ -260,19 +293,22 @@ export async function getDashboard() {
   const openQuotes = quoteRows.filter((quote) =>
     ["draft", "sent"].includes(quote.status),
   ).length;
-  const quotePipeline = quoteRows
-    .filter((quote) => ["draft", "sent"].includes(quote.status))
-    .reduce((sum, quote) => sum + num(quote.total), 0);
-  const receivables = invoiceRows.reduce(
-    (sum, invoice) => sum + Math.max(num(invoice.total) - num(invoice.amountPaid), 0),
-    0,
+  const pipelineByCurrency = sumByCurrency(
+    quoteRows
+      .filter((quote) => ["draft", "sent"].includes(quote.status))
+      .map((quote) => ({ currency: quote.currency, amount: num(quote.total) })),
+  );
+  const receivablesByCurrency = sumByCurrency(
+    invoiceRows
+      .filter((invoice) => invoice.balance > 0.001 && invoice.status !== "void")
+      .map((invoice) => ({ currency: invoice.currency, amount: invoice.balance })),
   );
 
   return {
     openEnquiries,
     openQuotes,
-    quotePipeline,
-    receivables,
+    pipelineByCurrency,
+    receivablesByCurrency,
     enquiries: enquiryRows.slice(0, 5),
     quotes: quoteRows.slice(0, 5),
     invoices: invoiceRows.slice(0, 5),
@@ -408,4 +444,82 @@ export async function getPurchaseOrder(id: string) {
     .orderBy(asc(purchaseOrderLines.sortOrder));
 
   return { ...order, lines };
+}
+
+function sumByCurrency(rows: { currency: string; amount: number }[]) {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    totals.set(row.currency, (totals.get(row.currency) ?? 0) + row.amount);
+  }
+  return [...totals.entries()].map(([currency, amount]) => ({ currency, amount }));
+}
+
+export async function listCreditNotesForCustomer(customerId: string) {
+  return getDb()
+    .select()
+    .from(creditNotes)
+    .where(eq(creditNotes.customerId, customerId))
+    .orderBy(desc(creditNotes.createdAt));
+}
+
+export async function listProductTemplates() {
+  return getDb()
+    .select({
+      id: productTemplates.id,
+      name: productTemplates.name,
+      brand: productTemplates.brand,
+      unit: productTemplates.unit,
+      category: productTemplates.category,
+      lastCost: productTemplates.lastCost,
+      currency: productTemplates.currency,
+      supplierId: productTemplates.supplierId,
+      supplierName: suppliers.name,
+      updatedAt: productTemplates.updatedAt,
+    })
+    .from(productTemplates)
+    .leftJoin(suppliers, eq(productTemplates.supplierId, suppliers.id))
+    .orderBy(asc(productTemplates.name));
+}
+
+export async function listPendingApprovals() {
+  return getDb()
+    .select({
+      id: quoteApprovals.id,
+      quoteId: quoteApprovals.quoteId,
+      quoteNumber: quotes.number,
+      customerName: customers.name,
+      version: quoteApprovals.version,
+      status: quoteApprovals.status,
+      reason: quoteApprovals.reason,
+      createdAt: quoteApprovals.createdAt,
+    })
+    .from(quoteApprovals)
+    .innerJoin(quotes, eq(quoteApprovals.quoteId, quotes.id))
+    .innerJoin(customers, eq(quotes.customerId, customers.id))
+    .where(eq(quoteApprovals.status, "pending"))
+    .orderBy(desc(quoteApprovals.createdAt));
+}
+
+export async function listApprovalsForQuote(quoteId: string) {
+  return getDb()
+    .select()
+    .from(quoteApprovals)
+    .where(eq(quoteApprovals.quoteId, quoteId))
+    .orderBy(desc(quoteApprovals.createdAt));
+}
+
+export async function listAudit(entityType: string, entityId: string) {
+  return getDb()
+    .select()
+    .from(auditEvents)
+    .where(and(eq(auditEvents.entityType, entityType), eq(auditEvents.entityId, entityId)))
+    .orderBy(desc(auditEvents.createdAt));
+}
+
+export async function getShare(token: string) {
+  const [share] = await getDb()
+    .select()
+    .from(documentShares)
+    .where(and(eq(documentShares.token, token), gt(documentShares.expiresAt, new Date())));
+  return share ?? null;
 }

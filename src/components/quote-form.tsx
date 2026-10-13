@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMoney, num, toDateInput } from "@/lib/format";
+import { currencies } from "@/lib/currency";
 import { lineMargin, quoteMargin } from "@/lib/margin";
 
 type LineState = {
@@ -88,11 +89,21 @@ export function QuoteForm({
   customers,
   suppliers,
   enquiries,
+  templates = [],
   defaults,
 }: {
   customers: { id: string; name: string }[];
   suppliers: { id: string; name: string }[];
   enquiries: { id: string; reference: string; title: string; customerId: string }[];
+  templates?: {
+    id: string;
+    name: string;
+    brand: string | null;
+    unit: string;
+    lastCost: string;
+    currency: string;
+    supplierId: string | null;
+  }[];
   defaults?: QuoteDefaults;
 }) {
   const [state, formAction, pending] = useActionState(saveQuote, null);
@@ -205,13 +216,19 @@ export function QuoteForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="currency">Currency</Label>
-          <Input
+          <select
             id="currency"
             name="currency"
+            className={selectClassName}
             value={currency}
-            onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-            maxLength={8}
-          />
+            onChange={(event) => setCurrency(event.target.value)}
+          >
+            {currencies.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="validUntil">Valid until</Label>
@@ -336,15 +353,58 @@ export function QuoteForm({
         })}
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() =>
-          setLines((current) => [...current, emptyLine(`line-${Date.now()}`)])
-        }
-      >
-        Add line
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        {templates.length > 0 ? (
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Label htmlFor="template">Last known cost</Label>
+            <select
+              id="template"
+              className={selectClassName}
+              defaultValue=""
+              onChange={(event) => {
+                const template = templates.find((item) => item.id === event.target.value);
+                event.target.value = "";
+                if (!template) return;
+                const cost = num(template.lastCost);
+                if (template.currency === "USD" || template.currency === "ZiG") {
+                  setCurrency(template.currency);
+                }
+                setLines((current) => [
+                  ...current,
+                  {
+                    ...emptyLine(`line-${Date.now()}`),
+                    description: template.name,
+                    brand: template.brand ?? "",
+                    unit: template.unit,
+                    supplierId: template.supplierId ?? "",
+                    costPrice: String(cost),
+                    markupPercent: "30",
+                    sellPrice: (cost * 1.3).toFixed(2),
+                  },
+                ]);
+              }}
+            >
+              <option value="">Add a product template</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                  {template.brand ? ` · ${template.brand}` : ""} · {template.lastCost} {template.currency}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11"
+          onClick={() =>
+            setLines((current) => [...current, emptyLine(`line-${Date.now()}`)])
+          }
+        >
+          Add line
+        </Button>
+      </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
         <p>Quote total {formatMoney(totals.sell, currency)}. Tax is 0 in this phase.</p>

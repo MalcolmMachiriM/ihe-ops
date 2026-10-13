@@ -33,3 +33,11 @@ export function canRecordPayment(role: StaffRole) {
 export function canSource(role: StaffRole) {
   return role === "admin" || role === "sales";
 }
+
+export function canIssueCredit(role: StaffRole) {
+  return role === "admin" || role === "accounts";
+}
+
+export function canApproveQuotes(role: StaffRole) {
+  return role === "admin";
+}

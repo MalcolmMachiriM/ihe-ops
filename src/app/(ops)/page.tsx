@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getDashboard } from "@/db/queries";
-import { formatDate, formatMoney, num } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { canManageEnquiries } from "@/lib/roles";
 import { requireUser } from "@/lib/auth";
 
@@ -39,13 +39,13 @@ export default async function DashboardPage() {
     },
     {
       label: "Quote pipeline",
-      value: formatMoney(stats.quotePipeline),
-      hint: "Value still in play",
+      value: moneyList(stats.pipelineByCurrency),
+      hint: "Open quotes, split by currency",
     },
     {
       label: "Receivables",
-      value: formatMoney(stats.receivables),
-      hint: "Outstanding on invoices",
+      value: moneyList(stats.receivablesByCurrency),
+      hint: "Outstanding after payments and credits",
     },
   ];
 
@@ -166,7 +166,7 @@ export default async function DashboardPage() {
                       <StatusBadge status={invoice.status} />
                     </TableCell>
                     <TableCell>
-                      {formatMoney(num(invoice.total) - num(invoice.amountPaid), invoice.currency)}
+                      {formatMoney(invoice.balance, invoice.currency)}
                     </TableCell>
                     <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                   </TableRow>
@@ -178,4 +178,9 @@ export default async function DashboardPage() {
       </section>
     </div>
   );
+}
+
+function moneyList(rows: { currency: string; amount: number }[]) {
+  if (rows.length === 0) return formatMoney(0, "USD");
+  return rows.map((row) => formatMoney(row.amount, row.currency)).join(" · ");
 }
