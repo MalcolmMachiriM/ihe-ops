@@ -26,7 +26,7 @@ npm install
 npm run dev
 ```
 
-App runs at [http://127.0.0.1:43127](http://127.0.0.1:43127).
+App runs at [http://localhost:43127](http://localhost:43127).
 
 ### Database and sign-in
 

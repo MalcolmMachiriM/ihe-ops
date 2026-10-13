@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -185,7 +185,19 @@ export function AppShell({
                   {role}
                 </div>
               ) : null}
-              <UserButton />
+              <Show when="signed-out">
+                <SignInButton mode="redirect">
+                  <Button variant="outline" size="sm">
+                    Sign in
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="redirect">
+                  <Button size="sm">Sign up</Button>
+                </SignUpButton>
+              </Show>
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
             </div>
           </header>
           <main className="flex-1 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-8 md:py-8">{children}</main>
