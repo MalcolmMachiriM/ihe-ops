@@ -145,6 +145,7 @@ export function EnquiryForm({
             ["whatsapp", "WhatsApp"],
             ["phone", "Phone"],
             ["email", "Email"],
+            ["website", "Website"],
           ]}
         />
         <Choice

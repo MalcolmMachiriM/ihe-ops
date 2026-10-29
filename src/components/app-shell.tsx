@@ -130,7 +130,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff7ed_0%,_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#eef2f6_100%)]">
-      <div className="mx-auto flex min-h-screen max-w-[1400px]">
+      <div className="flex min-h-screen">
         {/* Desktop sidebar — never transformed or pointer-event gated */}
         <aside className="hidden w-72 shrink-0 border-r border-slate-800 bg-slate-950 text-slate-100 lg:block">
           <SidebarChrome />

@@ -42,7 +42,7 @@ export const enquirySchema = z.object({
   customerId: z.string().uuid("Choose a customer"),
   title: z.string().trim().min(1, "Title is required"),
   description: optionalText,
-  source: z.enum(["whatsapp", "phone", "email"]),
+  source: z.enum(["whatsapp", "phone", "email", "website"]),
   urgency: z.enum(["low", "normal", "high"]),
   status: z.enum(["new", "sourcing", "quoted", "won", "lost", "expired"]),
   neededBy: z.string().optional().default(""),

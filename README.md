@@ -67,4 +67,4 @@ On your machine, keep this repo next to your other projects, for example:
 
 ## Next build steps
 
-Tracked checklist: [PLAN.md](PLAN.md). Phases 1–4 are in the app. After setting `DATABASE_URL`, run `npm run db:migrate` and `npm run db:seed`. Supplier reply files need `BLOB_READ_WRITE_TOKEN`. Quote emails need `RESEND_API_KEY` and `NEXT_PUBLIC_APP_URL`.
+Tracked checklist: [PLAN.md](PLAN.md). Phases 1–4 are in the app. After setting `DATABASE_URL`, run `npm run db:migrate` and `npm run db:seed`. Supplier reply files need `BLOB_READ_WRITE_TOKEN`. Quote emails need `RESEND_API_KEY` and `NEXT_PUBLIC_APP_URL`. Website contact intake from ihe-site needs `INTAKE_API_KEY` (site sends the same value as `OPS_INTAKE_API_KEY`).
