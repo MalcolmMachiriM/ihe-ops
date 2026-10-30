@@ -6,6 +6,7 @@ import { FormError } from "@/components/record-forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function SharePanel({
   kind,
@@ -33,6 +34,15 @@ export function SharePanel({
           type="email"
           defaultValue={email ?? ""}
           placeholder="Leave blank to only create a link"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${kind}-message`}>Message</Label>
+        <Textarea
+          id={`${kind}-message`}
+          name="message"
+          rows={4}
+          placeholder={`Optional note included in the email with the ${kind}`}
         />
       </div>
       <Button type="submit" disabled={pending} className="min-h-11">

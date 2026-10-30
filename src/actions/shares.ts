@@ -24,6 +24,7 @@ export async function sendDocumentLink(
   const kind = field(formData, "kind");
   const documentId = field(formData, "documentId");
   const email = field(formData, "email");
+  const message = field(formData, "message");
   if (!kinds.includes(kind as (typeof kinds)[number])) {
     return { error: "Choose a document to share." };
   }
@@ -51,13 +52,16 @@ export async function sendDocumentLink(
       return { url, error: "The link is ready, but the PDF could not be built for email." };
     }
 
+    const footer = `Please find your ${kind} attached. You can also view it online: ${url}`;
+    const text = message ? `${message}\n\n${footer}` : footer;
+
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
       from: process.env.RESEND_FROM || defaultFrom,
       to: email,
       cc: staffCc,
       subject: `Your ${kind} from Infinite Hardware & Electrical`,
-      text: `Please find your ${kind} attached. You can also view it online: ${url}`,
+      text,
       attachments: [
         {
           filename: pdf.filename,
