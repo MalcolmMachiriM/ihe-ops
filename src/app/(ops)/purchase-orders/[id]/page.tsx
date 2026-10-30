@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setPurchaseOrderStatus } from "@/actions/sourcing";
+import { ExportMenu } from "@/components/export-menu";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { getPurchaseOrder } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
 import { formatMoney, num } from "@/lib/format";
 import { canSource } from "@/lib/roles";
+
 
 export default async function PurchaseOrderPage({
   params,
@@ -34,6 +36,7 @@ export default async function PurchaseOrderPage({
             Enquiry
           </Link>
         ) : null}
+        <ExportMenu baseHref={`/purchase-orders/${order.id}/export`} />
       </div>
       {order.notes ? <p className="mb-4 max-w-2xl text-sm text-slate-600">{order.notes}</p> : null}
       <Card className="border-slate-200/80 bg-white/90 shadow-none">

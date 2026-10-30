@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { getQuote } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
-import { quotePdf } from "@/lib/pdf";
-import { companyName, pdfResponse } from "@/lib/pdf-response";
+import { exportQuote, mapSellLines } from "@/lib/document-export";
+import { pdfResponse } from "@/lib/pdf-response";
 
 export async function GET(
   _request: Request,
@@ -13,14 +13,15 @@ export async function GET(
   const quote = await getQuote(id);
   if (!quote) notFound();
 
-  const buffer = await quotePdf({
-    company: companyName(),
+  const buffer = await exportQuote("pdf", {
     number: quote.number,
     customerName: quote.customerName,
     validUntil: quote.validUntil,
     currency: quote.currency,
     total: quote.total,
-    lines: quote.lines,
+    notes: quote.notes,
+    terms: quote.terms,
+    lines: mapSellLines(quote.lines),
   });
 
   return pdfResponse(buffer, `${quote.number}.pdf`);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExportMenu } from "@/components/export-menu";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,6 +22,7 @@ export default async function ReportsPage() {
         title="Reports"
         description="Pipeline and margin stay in their own currency. USD and ZiG are never added together."
       />
+      <ExportMenu baseHref="/reports/export" />
       <ReportTable
         title="Pipeline"
         rows={report.pipeline.map((row) => ({

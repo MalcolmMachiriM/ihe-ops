@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ExportMenu } from "@/components/export-menu";
 import { LineTable } from "@/components/line-table";
 import { CreditForm, PaymentForm } from "@/components/record-forms";
 import { SharePanel } from "@/components/share-panel";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCustomer, getInvoice } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
 import { formatDate, formatMoney } from "@/lib/format";
 import { canIssueCredit, canRecordPayment } from "@/lib/roles";
-import { cn } from "@/lib/utils";
+
 
 export default async function InvoicePage({
   params,
@@ -43,9 +43,7 @@ export default async function InvoicePage({
         <Link href={`/customers/${invoice.customerId}/statement`} className="text-sm text-amber-700 hover:underline">
           Statement
         </Link>
-        <Link href={`/invoices/${invoice.id}/pdf`} className={cn(buttonVariants({ variant: "outline" }))}>
-          Download PDF
-        </Link>
+        <ExportMenu baseHref={`/invoices/${invoice.id}/export`} />
       </div>
       <Card className="border-slate-200/80 bg-white/90 shadow-none">
         <CardContent className="pt-6">

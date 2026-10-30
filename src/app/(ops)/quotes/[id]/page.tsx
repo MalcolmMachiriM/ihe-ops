@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ExportMenu } from "@/components/export-menu";
 import { LineTable } from "@/components/line-table";
 import { QuoteForm } from "@/components/quote-form";
 import { ConvertQuoteButtons } from "@/components/record-forms";
 import { SharePanel } from "@/components/share-panel";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PurchaseOrderButton, QuoteReasons } from "@/components/sourcing-board";
 import {
@@ -25,7 +25,7 @@ import {
 import { requireUser } from "@/lib/auth";
 import { formatDate, formatMoney } from "@/lib/format";
 import { canCreateProforma, canEditQuotes, canIssueInvoice, canSource } from "@/lib/roles";
-import { cn } from "@/lib/utils";
+
 
 export default async function QuotePage({
   params,
@@ -64,9 +64,7 @@ export default async function QuotePage({
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <StatusBadge status={quote.status} />
         <span className="text-sm text-slate-500">Version {quote.version}</span>
-        <Link href={`/quotes/${quote.id}/pdf`} className={cn(buttonVariants({ variant: "outline" }))}>
-          Download PDF
-        </Link>
+        <ExportMenu baseHref={`/quotes/${quote.id}/export`} />
       </div>
       {notice === "approval" || pending ? (
         <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">

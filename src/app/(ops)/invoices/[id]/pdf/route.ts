@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { getInvoice } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
-import { invoicePdf } from "@/lib/pdf";
-import { companyName, pdfResponse } from "@/lib/pdf-response";
+import { exportInvoice, mapSellLines } from "@/lib/document-export";
+import { pdfResponse } from "@/lib/pdf-response";
 
 export async function GET(
   _request: Request,
@@ -13,8 +13,7 @@ export async function GET(
   const invoice = await getInvoice(id);
   if (!invoice) notFound();
 
-  const buffer = await invoicePdf({
-    company: companyName(),
+  const buffer = await exportInvoice("pdf", {
     number: invoice.number,
     customerName: invoice.customerName,
     status: invoice.status,
@@ -23,7 +22,8 @@ export async function GET(
     total: invoice.total,
     amountPaid: invoice.amountPaid,
     credited: invoice.credited,
-    lines: invoice.lines,
+    notes: invoice.notes,
+    lines: mapSellLines(invoice.lines),
   });
 
   return pdfResponse(buffer, `${invoice.number}.pdf`);

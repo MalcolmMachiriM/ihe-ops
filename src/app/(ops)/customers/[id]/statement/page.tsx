@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ExportMenu } from "@/components/export-menu";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { getCustomerStatement } from "@/db/reports";
 import { formatDate, formatMoney } from "@/lib/format";
+
 
 export default async function StatementPage({
   params,
@@ -28,11 +30,12 @@ export default async function StatementPage({
         title={`${statement.customer.name} statement`}
         description="Invoices increase the balance. Payments and credit notes reduce it. Each currency stands on its own."
       />
-      <p className="mb-4 text-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
         <Link href={`/customers/${statement.customer.id}`} className="text-amber-700 hover:underline">
           Back to customer
         </Link>
-      </p>
+        <ExportMenu baseHref={`/customers/${statement.customer.id}/statement/export`} />
+      </div>
       <Card className="border-slate-200/80 bg-white/90 shadow-none">
         <CardContent className="pt-6">
           <Table>

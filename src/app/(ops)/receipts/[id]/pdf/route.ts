@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { getReceipt } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
-import { receiptPdf } from "@/lib/pdf";
-import { companyName, pdfResponse } from "@/lib/pdf-response";
+import { exportReceipt } from "@/lib/document-export";
+import { pdfResponse } from "@/lib/pdf-response";
 
 export async function GET(
   _request: Request,
@@ -13,8 +13,7 @@ export async function GET(
   const receipt = await getReceipt(id);
   if (!receipt) notFound();
 
-  const buffer = await receiptPdf({
-    company: companyName(),
+  const buffer = await exportReceipt("pdf", {
     number: receipt.number,
     customerName: receipt.customerName,
     invoiceNumber: receipt.invoiceNumber,
@@ -22,6 +21,7 @@ export async function GET(
     amount: receipt.amount,
     currency: receipt.currency,
     issuedAt: receipt.issuedAt,
+    notes: receipt.notes,
   });
 
   return pdfResponse(buffer, `${receipt.number}.pdf`);

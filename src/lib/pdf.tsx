@@ -1,39 +1,77 @@
 import {
   Document,
+  Image,
   Page,
   StyleSheet,
   Text,
   View,
   renderToBuffer,
 } from "@react-pdf/renderer";
+import { brand, letterheadPngBuffer } from "@/lib/brand";
+import type {
+  InvoiceExportInput,
+  PurchaseOrderExportInput,
+  QuoteExportInput,
+  ReceiptExportInput,
+  ReportExportInput,
+  StatementExportInput,
+} from "@/lib/export-types";
 import { formatDate, formatMoney, num } from "@/lib/format";
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontSize: 11, fontFamily: "Helvetica", color: "#0f172a" },
-  brand: { fontSize: 18, marginBottom: 4 },
-  muted: { color: "#475569", marginBottom: 16 },
-  title: { fontSize: 16, marginBottom: 8 },
-  row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingVertical: 6 },
-  head: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#0f172a", paddingBottom: 4, marginTop: 12 },
+  page: {
+    paddingTop: 110,
+    paddingBottom: 90,
+    paddingHorizontal: 48,
+    fontSize: 10,
+    fontFamily: "Helvetica",
+    color: brand.colors.ink,
+    backgroundColor: brand.colors.page,
+  },
+  letterhead: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+  },
+  title: { fontSize: 16, marginBottom: 4, fontFamily: "Helvetica-Bold" },
+  muted: { color: brand.colors.muted, marginBottom: 4 },
+  block: { marginBottom: 10 },
+  head: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: brand.colors.ink,
+    paddingBottom: 4,
+    marginTop: 14,
+    marginBottom: 2,
+  },
+  row: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: brand.colors.line,
+    paddingVertical: 5,
+  },
   cell: { flex: 1 },
-  wide: { flex: 2 },
-  total: { marginTop: 16, fontSize: 13 },
+  wide: { flex: 2.4 },
+  right: { flex: 1, textAlign: "right" },
+  total: { marginTop: 14, fontSize: 12, fontFamily: "Helvetica-Bold" },
+  note: { marginTop: 10, color: brand.colors.muted, fontSize: 9 },
+  sectionTitle: {
+    marginTop: 16,
+    marginBottom: 6,
+    fontFamily: "Helvetica-Bold",
+    fontSize: 11,
+  },
 });
 
-type Line = {
-  description: string;
-  quantity: string | number;
-  unit: string;
-  sellPrice: string | number;
-};
-
 function DocumentShell({
-  company,
+  letterhead,
   title,
   subtitle,
   children,
 }: {
-  company: string;
+  letterhead: Buffer;
   title: string;
   subtitle: string;
   children: React.ReactNode;
@@ -41,123 +79,236 @@ function DocumentShell({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.brand}>{company}</Text>
-        <Text style={styles.muted}>Gweru, Zimbabwe</Text>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.muted}>{subtitle}</Text>
+        {/* Letterhead is decorative page chrome for @react-pdf, not an HTML image. */}
+        {/* eslint-disable-next-line jsx-a11y/alt-text */}
+        <Image src={letterhead} style={styles.letterhead} fixed />
+
+        <View style={styles.block}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.muted}>{subtitle}</Text>
+        </View>
         {children}
       </Page>
     </Document>
   );
 }
 
-export async function quotePdf(input: {
-  company: string;
-  number: string;
-  customerName: string;
-  validUntil: Date | string | null;
+function LinesTable({
+  lines,
+  currency,
+  priceLabel = "Price",
+}: {
+  lines: {
+    description: string;
+    brand?: string | null;
+    quantity: string | number;
+    unit: string;
+    unitPrice: string | number;
+  }[];
   currency: string;
-  total: string | number;
-  lines: Line[];
+  priceLabel?: string;
 }) {
-  const buffer = await renderToBuffer(
+  return (
+    <>
+      <View style={styles.head}>
+        <Text style={styles.wide}>Item</Text>
+        <Text style={styles.cell}>Qty</Text>
+        <Text style={styles.right}>{priceLabel}</Text>
+        <Text style={styles.right}>Amount</Text>
+      </View>
+      {lines.map((line, index) => {
+        const amount = num(line.quantity) * num(line.unitPrice);
+        return (
+          <View key={`${line.description}-${index}`} style={styles.row} wrap={false}>
+            <View style={styles.wide}>
+              <Text>{line.description}</Text>
+              {line.brand ? <Text style={styles.muted}>{line.brand}</Text> : null}
+            </View>
+            <Text style={styles.cell}>
+              {num(line.quantity)} {line.unit}
+            </Text>
+            <Text style={styles.right}>{formatMoney(line.unitPrice, currency)}</Text>
+            <Text style={styles.right}>{formatMoney(amount, currency)}</Text>
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
+export async function quotePdf(input: QuoteExportInput & { company?: string }) {
+  const letterhead = await letterheadPngBuffer();
+  return renderToBuffer(
     <DocumentShell
-      company={input.company}
+      letterhead={letterhead}
       title={input.number}
       subtitle={`${input.customerName} · valid until ${formatDate(input.validUntil)}`}
     >
-      <View style={styles.head}>
-        <Text style={styles.wide}>Item</Text>
-        <Text style={styles.cell}>Qty</Text>
-        <Text style={styles.cell}>Price</Text>
-        <Text style={styles.cell}>Amount</Text>
-      </View>
-      {input.lines.map((line) => {
-        const amount = num(line.quantity) * num(line.sellPrice);
-        return (
-          <View key={line.description} style={styles.row}>
-            <Text style={styles.wide}>{line.description}</Text>
-            <Text style={styles.cell}>
-              {num(line.quantity)} {line.unit}
-            </Text>
-            <Text style={styles.cell}>{formatMoney(line.sellPrice, input.currency)}</Text>
-            <Text style={styles.cell}>{formatMoney(amount, input.currency)}</Text>
-          </View>
-        );
-      })}
+      <LinesTable lines={input.lines} currency={input.currency} />
       <Text style={styles.total}>Total {formatMoney(input.total, input.currency)}</Text>
+      {input.notes ? <Text style={styles.note}>Notes: {input.notes}</Text> : null}
+      {input.terms ? <Text style={styles.note}>Terms: {input.terms}</Text> : null}
     </DocumentShell>,
   );
-  return buffer;
 }
 
-export async function invoicePdf(input: {
-  company: string;
-  number: string;
-  customerName: string;
-  status: string;
-  dueDate: Date | string | null;
-  currency: string;
-  total: string | number;
-  amountPaid: string | number;
-  credited?: string | number;
-  lines: Line[];
-}) {
+export async function invoicePdf(input: InvoiceExportInput & { company?: string }) {
+  const letterhead = await letterheadPngBuffer();
   const balance = num(input.total) - num(input.amountPaid) - num(input.credited ?? 0);
-  const buffer = await renderToBuffer(
+  return renderToBuffer(
     <DocumentShell
-      company={input.company}
+      letterhead={letterhead}
       title={input.number}
       subtitle={`${input.customerName} · ${input.status} · due ${formatDate(input.dueDate)}`}
     >
-      <View style={styles.head}>
-        <Text style={styles.wide}>Item</Text>
-        <Text style={styles.cell}>Qty</Text>
-        <Text style={styles.cell}>Price</Text>
-        <Text style={styles.cell}>Amount</Text>
-      </View>
-      {input.lines.map((line) => {
-        const amount = num(line.quantity) * num(line.sellPrice);
-        return (
-          <View key={line.description} style={styles.row}>
-            <Text style={styles.wide}>{line.description}</Text>
-            <Text style={styles.cell}>
-              {num(line.quantity)} {line.unit}
-            </Text>
-            <Text style={styles.cell}>{formatMoney(line.sellPrice, input.currency)}</Text>
-            <Text style={styles.cell}>{formatMoney(amount, input.currency)}</Text>
-          </View>
-        );
-      })}
+      <LinesTable lines={input.lines} currency={input.currency} />
       <Text style={styles.total}>Total {formatMoney(input.total, input.currency)}</Text>
       <Text>Paid {formatMoney(input.amountPaid, input.currency)}</Text>
       <Text>Credits {formatMoney(input.credited ?? 0, input.currency)}</Text>
-      <Text>Balance {formatMoney(balance, input.currency)}</Text>
+      <Text style={styles.total}>Balance {formatMoney(balance, input.currency)}</Text>
+      {input.notes ? <Text style={styles.note}>Notes: {input.notes}</Text> : null}
     </DocumentShell>,
   );
-  return buffer;
 }
 
-export async function receiptPdf(input: {
-  company: string;
-  number: string;
-  customerName: string;
-  invoiceNumber: string;
-  method: string;
-  amount: string | number;
-  currency: string;
-  issuedAt: Date | string;
-}) {
-  const buffer = await renderToBuffer(
+export async function receiptPdf(input: ReceiptExportInput & { company?: string }) {
+  const letterhead = await letterheadPngBuffer();
+  return renderToBuffer(
     <DocumentShell
-      company={input.company}
+      letterhead={letterhead}
       title={input.number}
       subtitle={`${input.customerName} · ${formatDate(input.issuedAt)}`}
     >
       <Text>Invoice {input.invoiceNumber}</Text>
       <Text>Method {input.method.replace(/_/g, " ")}</Text>
       <Text style={styles.total}>Amount {formatMoney(input.amount, input.currency)}</Text>
+      {input.notes ? <Text style={styles.note}>Notes: {input.notes}</Text> : null}
     </DocumentShell>,
   );
-  return buffer;
+}
+
+export async function purchaseOrderPdf(input: PurchaseOrderExportInput) {
+  const letterhead = await letterheadPngBuffer();
+  return renderToBuffer(
+    <DocumentShell
+      letterhead={letterhead}
+      title={input.number}
+      subtitle={`${input.supplierName} · ${input.quoteNumber} · ${input.status}`}
+    >
+      <LinesTable lines={input.lines} currency={input.currency} priceLabel="Cost" />
+      {input.notes ? <Text style={styles.note}>Notes: {input.notes}</Text> : null}
+    </DocumentShell>,
+  );
+}
+
+export async function statementPdf(input: StatementExportInput) {
+  const letterhead = await letterheadPngBuffer();
+  return renderToBuffer(
+    <DocumentShell letterhead={letterhead} title="Customer statement" subtitle={input.customerName}>
+      <View style={styles.head}>
+        <Text style={styles.cell}>Date</Text>
+        <Text style={styles.wide}>Item</Text>
+        <Text style={styles.right}>Debit</Text>
+        <Text style={styles.right}>Credit</Text>
+        <Text style={styles.right}>Balance</Text>
+      </View>
+      {input.rows.map((row, index) => (
+        <View key={`${row.label}-${index}`} style={styles.row} wrap={false}>
+          <Text style={styles.cell}>{formatDate(row.date)}</Text>
+          <Text style={styles.wide}>{row.label}</Text>
+          <Text style={styles.right}>
+            {row.debit ? formatMoney(row.debit, row.currency) : "—"}
+          </Text>
+          <Text style={styles.right}>
+            {row.credit ? formatMoney(row.credit, row.currency) : "—"}
+          </Text>
+          <Text style={styles.right}>{formatMoney(row.balance, row.currency)}</Text>
+        </View>
+      ))}
+      {input.balances.map(([currency, amount]) => (
+        <Text key={currency} style={styles.total}>
+          Balance {currency}: {formatMoney(amount, currency)}
+        </Text>
+      ))}
+    </DocumentShell>,
+  );
+}
+
+export async function reportPdf(input: ReportExportInput) {
+  const letterhead = await letterheadPngBuffer();
+  return renderToBuffer(
+    <DocumentShell
+      letterhead={letterhead}
+      title="Operations report"
+      subtitle="Pipeline, margin, and receivables ageing"
+    >
+      <Text style={styles.sectionTitle}>Pipeline</Text>
+      <View style={styles.head}>
+        <Text style={styles.wide}>Status</Text>
+        <Text style={styles.cell}>Currency</Text>
+        <Text style={styles.cell}>Quotes</Text>
+        <Text style={styles.right}>Amount</Text>
+      </View>
+      {input.pipeline.map((row, index) => (
+        <View key={`${row.status}-${index}`} style={styles.row} wrap={false}>
+          <Text style={styles.wide}>{row.status}</Text>
+          <Text style={styles.cell}>{row.currency}</Text>
+          <Text style={styles.cell}>{row.count}</Text>
+          <Text style={styles.right}>{formatMoney(row.amount, row.currency)}</Text>
+        </View>
+      ))}
+      <MarginBlock title="Margin by quote" rows={input.byQuote} />
+      <MarginBlock title="Margin by category" rows={input.byCategory} />
+      <MarginBlock title="Margin by salesperson" rows={input.bySalesperson} />
+      <Text style={styles.sectionTitle}>Receivables ageing</Text>
+      <View style={styles.head}>
+        <Text style={styles.cell}>Currency</Text>
+        <Text style={styles.right}>Current</Text>
+        <Text style={styles.right}>1–30</Text>
+        <Text style={styles.right}>31–60</Text>
+        <Text style={styles.right}>61–90</Text>
+        <Text style={styles.right}>90+</Text>
+      </View>
+      {input.ageing.map((row) => (
+        <View key={row.currency} style={styles.row} wrap={false}>
+          <Text style={styles.cell}>{row.currency}</Text>
+          <Text style={styles.right}>{formatMoney(row.current, row.currency)}</Text>
+          <Text style={styles.right}>{formatMoney(row.d30, row.currency)}</Text>
+          <Text style={styles.right}>{formatMoney(row.d60, row.currency)}</Text>
+          <Text style={styles.right}>{formatMoney(row.d90, row.currency)}</Text>
+          <Text style={styles.right}>{formatMoney(row.older, row.currency)}</Text>
+        </View>
+      ))}
+    </DocumentShell>,
+  );
+}
+
+function MarginBlock({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; currency: string; cost: number; sell: number }[];
+}) {
+  return (
+    <>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.head}>
+        <Text style={styles.wide}>Label</Text>
+        <Text style={styles.cell}>Currency</Text>
+        <Text style={styles.right}>Cost</Text>
+        <Text style={styles.right}>Sell</Text>
+        <Text style={styles.right}>Margin</Text>
+      </View>
+      {rows.map((row, index) => (
+        <View key={`${row.label}-${index}`} style={styles.row} wrap={false}>
+          <Text style={styles.wide}>{row.label}</Text>
+          <Text style={styles.cell}>{row.currency}</Text>
+          <Text style={styles.right}>{formatMoney(row.cost, row.currency)}</Text>
+          <Text style={styles.right}>{formatMoney(row.sell, row.currency)}</Text>
+          <Text style={styles.right}>{formatMoney(row.sell - row.cost, row.currency)}</Text>
+        </View>
+      ))}
+    </>
+  );
 }
