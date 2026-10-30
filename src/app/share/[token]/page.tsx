@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AcceptQuoteButton } from "@/components/accept-quote";
 import { getInvoice, getQuote, getReceipt, getShare } from "@/db/queries";
+import { brand } from "@/lib/brand";
 import { formatDate, formatMoney, num } from "@/lib/format";
 
 export default async function SharePage({
@@ -33,7 +34,7 @@ export default async function SharePage({
             <p className="text-sm text-slate-600">This quote is not open for acceptance.</p>
           )}
         </div>
-        <PdfLink token={token} />
+        <PdfSection token={token} />
       </ShareShell>
     );
   }
@@ -45,7 +46,7 @@ export default async function SharePage({
       <ShareShell title={invoice.number} subtitle={`${invoice.customerName} · due ${formatDate(invoice.dueDate)}`}>
         <LineList currency={invoice.currency} lines={invoice.lines} total={invoice.total} />
         <p className="mt-4 text-sm">Balance {formatMoney(invoice.balance, invoice.currency)}</p>
-        <PdfLink token={token} />
+        <PdfSection token={token} />
       </ShareShell>
     );
   }
@@ -58,7 +59,7 @@ export default async function SharePage({
       <p className="mt-2 text-sm text-slate-600">
         {formatDate(receipt.issuedAt)} · {receipt.invoiceNumber}
       </p>
-      <PdfLink token={token} />
+      <PdfSection token={token} />
     </ShareShell>
   );
 }
@@ -73,10 +74,19 @@ function ShareShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="mx-auto min-h-screen max-w-lg px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <p className="text-xs uppercase tracking-[0.16em] text-amber-700">Infinite Hardware & Electrical</p>
+    <main className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <p className="text-xs uppercase tracking-[0.16em] text-amber-700">{brand.company}</p>
       <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl text-slate-950">{title}</h1>
       <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
+      <p className="mt-3 text-sm text-slate-500">
+        {brand.address}
+        <span className="mx-2 text-slate-300">·</span>
+        {brand.phones.join(" · ")}
+        <span className="mx-2 text-slate-300">·</span>
+        <a href={`mailto:${brand.email}`} className="text-amber-700 hover:underline">
+          {brand.email}
+        </a>
+      </p>
       <div className="mt-6">{children}</div>
     </main>
   );
@@ -112,12 +122,23 @@ function LineList({
   );
 }
 
-function PdfLink({ token }: { token: string }) {
+function PdfSection({ token }: { token: string }) {
+  const href = `/share/${token}/pdf`;
   return (
-    <p className="mt-4">
-      <Link href={`/share/${token}/pdf`} className="inline-flex min-h-11 items-center text-sm text-amber-700 hover:underline">
-        Download PDF
-      </Link>
-    </p>
+    <div className="mt-8 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-medium text-slate-900">Document</h2>
+        <Link href={href} className="inline-flex min-h-11 items-center text-sm text-amber-700 hover:underline">
+          Download PDF
+        </Link>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+        <iframe
+          title="Document PDF"
+          src={href}
+          className="h-[min(80vh,56rem)] w-full"
+        />
+      </div>
+    </div>
   );
 }

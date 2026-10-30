@@ -26,15 +26,24 @@ export function SharePanel({
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="documentId" value={documentId} />
       <div className="space-y-1.5">
-        <Label htmlFor={`${kind}-email`}>Email a link</Label>
-        <Input id={`${kind}-email`} name="email" type="email" defaultValue={email ?? ""} placeholder="Leave blank to only create a link" />
+        <Label htmlFor={`${kind}-email`}>Customer email</Label>
+        <Input
+          id={`${kind}-email`}
+          name="email"
+          type="email"
+          defaultValue={email ?? ""}
+          placeholder="Leave blank to only create a link"
+        />
       </div>
       <Button type="submit" disabled={pending} className="min-h-11">
-        {pending ? "Sending…" : "Create link"}
+        {pending ? "Sending…" : "Send to customer"}
       </Button>
       <FormError message={state?.error} />
       {state?.url ? (
         <div className="space-y-2 text-sm">
+          {state.sent && !state.error ? (
+            <p className="text-emerald-800">PDF emailed with a view link. Staff were CC’d.</p>
+          ) : null}
           <p className="break-all text-slate-700">{state.url}</p>
           {whatsapp ? (
             <a href={whatsapp} className="inline-flex min-h-11 items-center text-amber-700 hover:underline" target="_blank" rel="noreferrer">

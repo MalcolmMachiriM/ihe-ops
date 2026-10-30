@@ -6,10 +6,13 @@ import { getDb } from "@/db";
 import { documentShares } from "@/db/schema";
 import { guardRole } from "@/lib/auth";
 import { field } from "@/lib/schemas";
+import { buildSharePdf, type ShareKind } from "@/lib/share-pdf";
 
-export type ShareState = { error?: string; url?: string } | null;
+export type ShareState = { error?: string; url?: string; sent?: boolean } | null;
 
 const kinds = ["quote", "invoice", "receipt"] as const;
+const defaultFrom = "Infinite Hardware & Electrical <sales@ihe.co.zw>";
+const staffCc = "ihardware19@gmail.com";
 
 export async function sendDocumentLink(
   _prev: ShareState,
@@ -43,18 +46,30 @@ export async function sendDocumentLink(
   }
 
   try {
+    const pdf = await buildSharePdf(kind as ShareKind, documentId);
+    if (!pdf) {
+      return { url, error: "The link is ready, but the PDF could not be built for email." };
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: process.env.RESEND_FROM || "IHE Ops <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM || defaultFrom,
       to: email,
+      cc: staffCc,
       subject: `Your ${kind} from Infinite Hardware & Electrical`,
-      text: `Open this link to view the ${kind}: ${url}`,
+      text: `Please find your ${kind} attached. You can also view it online: ${url}`,
+      attachments: [
+        {
+          filename: pdf.filename,
+          content: pdf.buffer.toString("base64"),
+        },
+      ],
     });
   } catch {
     return { url, error: "The link is ready, but the email did not send." };
   }
 
-  return { url };
+  return { url, sent: true };
 }
 
 async function appOrigin() {
