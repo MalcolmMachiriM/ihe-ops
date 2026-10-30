@@ -88,6 +88,11 @@ export const creditSchema = z.object({
 
 export type ActionState = { error: string } | null;
 
+export type CreatePartyState =
+  | { error: string }
+  | { id: string; name: string }
+  | null;
+
 export function field(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";

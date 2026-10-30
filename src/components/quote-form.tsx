@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useActionState } from "react";
+import { useActionState, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { saveQuote } from "@/actions/quotes";
+import { PartySelect, type PartyOption } from "@/components/party-select";
 import { FormError, selectClassName } from "@/components/record-forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,10 +107,21 @@ export function QuoteForm({
   defaults?: QuoteDefaults;
 }) {
   const [state, formAction, pending] = useActionState(saveQuote, null);
+  const [customerOptions, setCustomerOptions] = useState<PartyOption[]>(customers);
+  const [supplierOptions, setSupplierOptions] = useState<PartyOption[]>(suppliers);
   const [customerId, setCustomerId] = useState(defaults?.customerId ?? "");
   const [enquiryId, setEnquiryId] = useState(defaults?.enquiryId ?? "");
   const [currency, setCurrency] = useState(defaults?.currency ?? "USD");
   const [lines, setLines] = useState<LineState[]>(() => fromDefaults(defaults));
+
+  function rememberParty(
+    setOptions: Dispatch<SetStateAction<PartyOption[]>>,
+    party: PartyOption,
+  ) {
+    setOptions((current) =>
+      current.some((item) => item.id === party.id) ? current : [...current, party],
+    );
+  }
 
   const totals = useMemo(() => {
     return quoteMargin(
@@ -184,26 +195,16 @@ export function QuoteForm({
             ))}
           </select>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="customerId">Customer</Label>
-          <select
-            id="customerId"
-            name="customerId"
-            required
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
-            className={selectClassName}
-          >
-            <option value="" disabled>
-              Choose a customer
-            </option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <PartySelect
+          kind="customer"
+          id="customerId"
+          name="customerId"
+          required
+          value={customerId}
+          onChange={setCustomerId}
+          options={customerOptions}
+          onCreated={(party) => rememberParty(setCustomerOptions, party)}
+        />
         <div className="space-y-1.5">
           <Label htmlFor="status">Status</Label>
           <select id="status" name="status" defaultValue={defaults?.status ?? "draft"} className={selectClassName}>
@@ -273,21 +274,13 @@ export function QuoteForm({
                     onChange={(event) => updateLine(line.key, { brand: event.target.value }, "other")}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Supplier</Label>
-                  <select
-                    value={line.supplierId}
-                    onChange={(event) => updateLine(line.key, { supplierId: event.target.value }, "other")}
-                    className={selectClassName}
-                  >
-                    <option value="">Choose a supplier</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <PartySelect
+                  kind="supplier"
+                  value={line.supplierId}
+                  onChange={(supplierId) => updateLine(line.key, { supplierId }, "other")}
+                  options={supplierOptions}
+                  onCreated={(party) => rememberParty(setSupplierOptions, party)}
+                />
                 <div className="space-y-1.5">
                   <Label>Quantity</Label>
                   <Input

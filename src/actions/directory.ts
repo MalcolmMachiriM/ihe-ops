@@ -8,6 +8,7 @@ import { customers, suppliers } from "@/db/schema";
 import { guardRole } from "@/lib/auth";
 import {
   type ActionState,
+  type CreatePartyState,
   customerSchema,
   field,
   optionalId,
@@ -103,4 +104,77 @@ export async function saveSupplier(
   const [created] = await db.insert(suppliers).values(values).returning({ id: suppliers.id });
   revalidatePath("/suppliers");
   redirect(`/suppliers/${created.id}`);
+}
+
+export async function createCustomerQuick(
+  _prev: CreatePartyState,
+  formData: FormData,
+): Promise<CreatePartyState> {
+  const denied = await guardRole("admin", "sales");
+  if (denied) return denied;
+
+  const parsed = customerSchema.safeParse({
+    name: field(formData, "name"),
+    contactPerson: field(formData, "contactPerson"),
+    email: field(formData, "email"),
+    phone: field(formData, "phone"),
+    company: field(formData, "company"),
+    address: "",
+    notes: "",
+  });
+  if (!parsed.success) return { error: zodError(parsed.error) };
+
+  const data = parsed.data;
+  const db = getDb();
+  const [created] = await db
+    .insert(customers)
+    .values({
+      name: data.name,
+      contactPerson: blankToNull(data.contactPerson),
+      email: blankToNull(data.email),
+      phone: blankToNull(data.phone),
+      company: blankToNull(data.company),
+    })
+    .returning({ id: customers.id, name: customers.name });
+
+  revalidatePath("/customers");
+  revalidatePath("/quotes");
+  revalidatePath("/quotes/new");
+  revalidatePath("/enquiries");
+  return created;
+}
+
+export async function createSupplierQuick(
+  _prev: CreatePartyState,
+  formData: FormData,
+): Promise<CreatePartyState> {
+  const denied = await guardRole("admin", "sales");
+  if (denied) return denied;
+
+  const parsed = supplierSchema.safeParse({
+    name: field(formData, "name"),
+    contactPerson: field(formData, "contactPerson"),
+    email: field(formData, "email"),
+    phone: field(formData, "phone"),
+    categories: "",
+    notes: "",
+  });
+  if (!parsed.success) return { error: zodError(parsed.error) };
+
+  const data = parsed.data;
+  const db = getDb();
+  const [created] = await db
+    .insert(suppliers)
+    .values({
+      name: data.name,
+      contactPerson: blankToNull(data.contactPerson),
+      email: blankToNull(data.email),
+      phone: blankToNull(data.phone),
+    })
+    .returning({ id: suppliers.id, name: suppliers.name });
+
+  revalidatePath("/suppliers");
+  revalidatePath("/quotes");
+  revalidatePath("/quotes/new");
+  return created;
 }
